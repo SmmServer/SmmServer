@@ -38,8 +38,8 @@
             this.textBoxFriends = new System.Windows.Forms.TextBox();
             this.textBoxPretendo = new System.Windows.Forms.TextBox();
             this.textBoxCaddy = new System.Windows.Forms.TextBox();
-            this.buttonClear = new System.Windows.Forms.Button();
             this.buttonCemu = new System.Windows.Forms.Button();
+            this.linkLabelWebsite = new System.Windows.Forms.LinkLabel();
             this.tabControlProcesses.SuspendLayout();
             this.tabPageSmm.SuspendLayout();
             this.tabPageFriends.SuspendLayout();
@@ -176,16 +176,6 @@
             this.textBoxCaddy.TabIndex = 1;
             this.textBoxCaddy.WordWrap = false;
             // 
-            // buttonClear
-            // 
-            this.buttonClear.Location = new System.Drawing.Point(174, 12);
-            this.buttonClear.Name = "buttonClear";
-            this.buttonClear.Size = new System.Drawing.Size(75, 23);
-            this.buttonClear.TabIndex = 3;
-            this.buttonClear.Text = "Clear &logs";
-            this.buttonClear.UseVisualStyleBackColor = true;
-            this.buttonClear.Click += new System.EventHandler(this.buttonClear_Click);
-            // 
             // buttonCemu
             // 
             this.buttonCemu.Location = new System.Drawing.Point(93, 12);
@@ -196,13 +186,24 @@
             this.buttonCemu.UseVisualStyleBackColor = true;
             this.buttonCemu.Click += new System.EventHandler(this.buttonCemu_Click);
             // 
+            // linkLabelWebsite
+            // 
+            this.linkLabelWebsite.AutoSize = true;
+            this.linkLabelWebsite.Location = new System.Drawing.Point(174, 17);
+            this.linkLabelWebsite.Name = "linkLabelWebsite";
+            this.linkLabelWebsite.Size = new System.Drawing.Size(46, 13);
+            this.linkLabelWebsite.TabIndex = 5;
+            this.linkLabelWebsite.TabStop = true;
+            this.linkLabelWebsite.Text = "&Website";
+            this.linkLabelWebsite.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabelWebsite_LinkClicked);
+            // 
             // SmmServer
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.linkLabelWebsite);
             this.Controls.Add(this.buttonCemu);
-            this.Controls.Add(this.buttonClear);
             this.Controls.Add(this.tabControlProcesses);
             this.Controls.Add(this.buttonStart);
             this.Name = "SmmServer";
@@ -217,6 +218,7 @@
             this.tabPageCaddy.ResumeLayout(false);
             this.tabPageCaddy.PerformLayout();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -232,8 +234,8 @@
         private System.Windows.Forms.TextBox textBoxFriends;
         private System.Windows.Forms.TextBox textBoxPretendo;
         private System.Windows.Forms.TextBox textBoxCaddy;
-        private System.Windows.Forms.Button buttonClear;
         private System.Windows.Forms.Button buttonCemu;
+        private System.Windows.Forms.LinkLabel linkLabelWebsite;
     }
 }
 

@@ -123,7 +123,7 @@ namespace SmmServer
 
         AppendLine makeControlOutput(TabPage tab, TextBox textBox)
         {
-            var logStream = new StreamWriter(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, tab.Text + ".log"), true);
+            var logStream = new StreamWriter(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, tab.Text.TrimEnd('*') + ".log"), true);
             _logStreams.Add(logStream);
             return line => textBox.InvokeIfRequired(tb =>
             {
@@ -136,9 +136,9 @@ namespace SmmServer
 
         private void buttonStart_Click(object sender, EventArgs e)
         {
-            buttonStart.Enabled = !buttonStart.Enabled;
             if (_processes.Count == 0)
             {
+                buttonStart.Enabled = false;
                 if (File.Exists(_pidsFile))
                 {
                     var pids = File.ReadAllLines(_pidsFile);
@@ -169,14 +169,8 @@ namespace SmmServer
                 python(Path.Combine(_nintendoClientsDir, "example_friend_server.py"), makeControlOutput(tabPageFriends, textBoxFriends));
                 exec(Path.Combine(_caddyDir, "caddy.exe"), makeControlOutput(tabPageCaddy, textBoxCaddy));
                 exec(Path.Combine(_nintendoClientsDir, "Pretendo++.exe"), makeControlOutput(tabPagePretendo, textBoxPretendo));
-                buttonStart.Text = "&Stop";
+                buttonStart.Text = "Started";
             }
-            else
-            {
-                buttonStart.Text = "&Start";
-                stopProcesses();
-            }
-            buttonStart.Enabled = !buttonStart.Enabled;
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -208,6 +202,11 @@ namespace SmmServer
                 FileName = Path.Combine(_cemuDir, "Cemu.exe"),
                 WorkingDirectory = _cemuDir,
             });
+        }
+
+        private void linkLabelWebsite_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            Process.Start("https://smmserver.github.io");
         }
     }
 }
