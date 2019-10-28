@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<!-- https://en.wikipedia.org/wiki/File:Tango_Style_Mushroom_icon.svg -->
+<svg id="svg2" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://www.w3.org/2000/svg" height="48" width="48" version="1.0" xmlns:cc="http://creativecommons.org/ns#" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/">
+ <metadata id="metadata4687">
+  <rdf:RDF>
+   <cc:Work rdf:about="">
+    <dc:format>image/svg+xml</dc:format>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:title>Tango Style &apos;Shroom</dc:title>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Andrew Higginson</dc:title>
+     </cc:Agent>
+    </dc:creator>
+    <cc:license rdf:resource="http://creativecommons.org/licenses/by-sa/3.0/"/>
+   </cc:Work>
+   <cc:License rdf:about="http://creativecommons.org/licenses/by-sa/3.0/">
+    <cc:permits rdf:resource="http://creativecommons.org/ns#Reproduction"/>
+    <cc:permits rdf:resource="http://creativecommons.org/ns#Distribution"/>
+    <cc:requires rdf:resource="http://creativecommons.org/ns#Notice"/>
+    <cc:requires rdf:resource="http://creativecommons.org/ns#Attribution"/>
+    <cc:permits rdf:resource="http://creativecommons.org/ns#DerivativeWorks"/>
+    <cc:requires rdf:resource="http://creativecommons.org/ns#ShareAlike"/>
+   </cc:License>
+  </rdf:RDF>
+ </metadata>
+ <defs id="defs4">
+  <radialGradient id="radialGradient5305" gradientUnits="userSpaceOnUse" cy="537.53" cx="436.73" gradientTransform="matrix(1.2279e-7 .17872 -.99562 6.8401e-7 748.63 140.01)" r="212.52">
+   <stop id="stop3220" offset="0"/>
+   <stop id="stop3222" stop-opacity="0" offset="1"/>
+  </radialGradient>
+  <radialGradient id="radialGradient5307" gradientUnits="userSpaceOnUse" cy="314.05" cx="276.82" gradientTransform="matrix(0 .88122 -1.8234 0 707.91 -204.77)" r="212.52">
+   <stop id="stop3262" stop-color="#ef2929" offset="0"/>
+   <stop id="stop3264" stop-color="#c00" offset="1"/>
+  </radialGradient>
+ </defs>
+ <g id="g5288" transform="matrix(.11912 0 0 .11912 -1.4307 .59834)">
+  <g id="g5267" transform="matrix(.55612 0 0 1 94.333 0)">
+   <path id="path3284" stroke-linejoin="round" d="m357.31 339.46c-25-51.89-32.62-95.94-21.66-115.92 10.7-19.5 63.76 5.48 83.51-26.73 19.47-31.76-31.66-193.85-214.54-194.81-180.36-0.9349-214.33 167.06-199.53 195.76 14.54 28.2 63.72 7.23 83.514 22.31 19.796 15.09 5.112 83.53-15.336 123.81-20.194 39.79 75.402 49.97 147.04 49.02 71.63-0.94 161.27-3.05 137-53.44z" fill-rule="evenodd" stroke="#2e3436" stroke-width="12" fill="#eeeeec"/>
+   <path id="path5246" d="m319.09 237.98c-84.55 7.9-144.44 5.87-209 3.62 1.05 29.48-9.91 74.95-25.309 107.68-1.47 3.13-1.388 4.57-1.156 5.63 0.232 1.05 0.83 2.36 3.031 4.34 4.404 3.96 15.084 8.86 29.154 12.28 28.14 6.84 69.17 9.15 104.35 8.69 35.76-0.47 75.76-1.51 101.59-7.84 12.92-3.17 21.66-7.95 24.72-11.6s4.13-6-0.59-15.81c-0.04-0.05-0.07-0.11-0.1-0.16-18.97-41.02-27.27-78.79-26.69-106.83z" stroke="#fff" stroke-width="12" fill="none"/>
+   <path id="path2383" opacity=".55128" d="m357.31 285.91c-25-51.9-32.62-42.39-21.66-62.37 10.7-19.5 63.76 5.48 83.51-26.73 19.47-31.76-31.66-193.85-214.54-194.81-180.36-0.9349-214.33 167.06-199.53 195.76 14.54 28.2 63.72 7.23 83.514 22.31 19.796 15.09 5.112 29.97-15.336 70.26-20.194 39.78 70.882 14.91 142.51 13.96 71.64-0.94 165.8 32 141.53-18.38z" fill-rule="evenodd" fill="url(#radialGradient5305)"/>
+  </g>
+  <g id="g5274" transform="matrix(.88922 0 0 1 23.542 0)">
+   <path id="path2387" stroke-linejoin="round" d="m303.55 227.32c40.31-4.83 95.86 1.7 115.61-30.51 19.47-31.76-31.66-193.85-214.54-194.81-180.36-0.9349-214.33 167.06-199.53 195.76 14.54 28.2 74.881 30.19 111.84 31.76 36.93 1.56 146.92 2.55 186.62-2.2z" fill-rule="evenodd" stroke="#780000" stroke-width="12" fill="url(#radialGradient5307)"/>
+   <path id="path3272" d="m72.617 124.5c-4.775 14.67-15.876 24.22-24.791 21.31-8.915-2.9-12.265-17.15-7.481-31.82 4.775-14.676 15.876-24.22 24.791-21.316s12.265 17.156 7.481 31.826z" fill="#fff"/>
+   <path id="path3274" d="m145.64 80.871c-9.45 10.458-24.26 12.688-33.06 4.98-8.81-7.708-8.28-22.433 1.18-32.884 9.46-10.458 24.26-12.689 33.07-4.981 8.8 7.708 8.27 22.434-1.19 32.885z" fill="#fff"/>
+   <path id="path3276" d="m282.76 129.11c5.48 14.38-4.82 28.27-22.99 31.03-18.17 2.75-37.33-6.68-42.78-21.06-5.48-14.38 4.82-28.28 22.99-31.03 18.17-2.76 37.33 6.67 42.78 21.06z" fill="#fff"/>
+   <path id="path3278" d="m306.81 38.724c11.21 8.819 10.94 17.049-0.59 18.38-11.54 1.332-29.97-4.741-41.16-13.561-11.2-8.818-10.93-17.048 0.6-18.38 11.53-1.331 29.96 4.742 41.15 13.561z" fill="#fff"/>
+   <path id="path3280" d="m374.03 167.81c-4.64 13.78-16.08 17.37-25.55 8.03-9.46-9.35-13.36-28.09-8.71-41.86 4.64-13.78 16.08-17.38 25.55-8.03 9.46 9.34 13.37 28.09 8.71 41.86z" fill="#fff"/>
+   <path id="path3282" d="m167.42 169.44c6.27 15.6-0.53 33.33-15.19 39.58-14.65 6.25-31.61-1.33-37.86-16.94-6.27-15.6 0.53-33.32 15.18-39.58 14.66-6.25 31.61 1.34 37.87 16.94z" fill="#fff"/>
+   <path id="path3288" d="m213.4 73.159c-1.54 6.54-8.62 11.423-15.82 10.905-7.19-0.518-11.78-6.241-10.23-12.78 1.54-6.54 8.63-11.423 15.82-10.905 7.2 0.518 11.78 6.24 10.23 12.78z" fill="#fff"/>
+   <path id="path3290" d="m331.07 87.891c0.86 6.293-2.92 9.92-8.44 8.099-5.52-1.82-10.68-8.398-11.53-14.689-0.86-6.293 2.92-9.92 8.44-8.099 5.51 1.82 10.68 8.398 11.53 14.689z" fill="#fff"/>
+   <path id="path5251" opacity=".66239" stroke-linejoin="round" d="m204.56 14.625c-86.25-0.449-134.96 38.454-162.25 80.969-13.643 21.256-21.629 43.536-25.248 61.786-3.618 18.24-1.247 33.62-0.75 34.59 4.068 7.89 18.629 15.34 38.719 19.28s43.895 4.87 62.439 5.66c36.09 1.53 147.8 2.27 184.56-2.13 21.51-2.57 45.33-2.14 65.28-4.94 19.96-2.79 34.18-8.34 41.1-19.62 1.07-1.76 3.38-16.13-1.1-34.06-4.47-17.94-14.07-39.82-29.65-60.754-31.17-41.873-85.38-80.324-173.1-80.781z" stroke="#fff" stroke-width="12" fill="none"/>
+  </g>
+ </g>
+</svg>
