@@ -31,12 +31,12 @@
             this.buttonStart = new System.Windows.Forms.Button();
             this.tabControlProcesses = new System.Windows.Forms.TabControl();
             this.tabPageSmm = new System.Windows.Forms.TabPage();
-            this.tabPageFriends = new System.Windows.Forms.TabPage();
-            this.tabPagePretendo = new System.Windows.Forms.TabPage();
-            this.tabPageCaddy = new System.Windows.Forms.TabPage();
             this.textBoxSmm = new System.Windows.Forms.TextBox();
+            this.tabPageFriends = new System.Windows.Forms.TabPage();
             this.textBoxFriends = new System.Windows.Forms.TextBox();
+            this.tabPagePretendo = new System.Windows.Forms.TabPage();
             this.textBoxPretendo = new System.Windows.Forms.TextBox();
+            this.tabPageCaddy = new System.Windows.Forms.TabPage();
             this.textBoxCaddy = new System.Windows.Forms.TextBox();
             this.buttonCemu = new System.Windows.Forms.Button();
             this.linkLabelWebsite = new System.Windows.Forms.LinkLabel();
@@ -83,39 +83,6 @@
             this.tabPageSmm.Text = "NEX (SMM)";
             this.tabPageSmm.UseVisualStyleBackColor = true;
             // 
-            // tabPageFriends
-            // 
-            this.tabPageFriends.Controls.Add(this.textBoxFriends);
-            this.tabPageFriends.Location = new System.Drawing.Point(4, 22);
-            this.tabPageFriends.Name = "tabPageFriends";
-            this.tabPageFriends.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageFriends.Size = new System.Drawing.Size(768, 371);
-            this.tabPageFriends.TabIndex = 1;
-            this.tabPageFriends.Text = "NEX (Friends)";
-            this.tabPageFriends.UseVisualStyleBackColor = true;
-            // 
-            // tabPagePretendo
-            // 
-            this.tabPagePretendo.Controls.Add(this.textBoxPretendo);
-            this.tabPagePretendo.Location = new System.Drawing.Point(4, 22);
-            this.tabPagePretendo.Name = "tabPagePretendo";
-            this.tabPagePretendo.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPagePretendo.Size = new System.Drawing.Size(768, 371);
-            this.tabPagePretendo.TabIndex = 2;
-            this.tabPagePretendo.Text = "Pretendo++";
-            this.tabPagePretendo.UseVisualStyleBackColor = true;
-            // 
-            // tabPageCaddy
-            // 
-            this.tabPageCaddy.Controls.Add(this.textBoxCaddy);
-            this.tabPageCaddy.Location = new System.Drawing.Point(4, 22);
-            this.tabPageCaddy.Name = "tabPageCaddy";
-            this.tabPageCaddy.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageCaddy.Size = new System.Drawing.Size(768, 371);
-            this.tabPageCaddy.TabIndex = 3;
-            this.tabPageCaddy.Text = "Caddy";
-            this.tabPageCaddy.UseVisualStyleBackColor = true;
-            // 
             // textBoxSmm
             // 
             this.textBoxSmm.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -130,6 +97,17 @@
             this.textBoxSmm.Size = new System.Drawing.Size(768, 371);
             this.textBoxSmm.TabIndex = 0;
             this.textBoxSmm.WordWrap = false;
+            // 
+            // tabPageFriends
+            // 
+            this.tabPageFriends.Controls.Add(this.textBoxFriends);
+            this.tabPageFriends.Location = new System.Drawing.Point(4, 22);
+            this.tabPageFriends.Name = "tabPageFriends";
+            this.tabPageFriends.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPageFriends.Size = new System.Drawing.Size(768, 371);
+            this.tabPageFriends.TabIndex = 1;
+            this.tabPageFriends.Text = "NEX (Friends)";
+            this.tabPageFriends.UseVisualStyleBackColor = true;
             // 
             // textBoxFriends
             // 
@@ -146,6 +124,17 @@
             this.textBoxFriends.TabIndex = 1;
             this.textBoxFriends.WordWrap = false;
             // 
+            // tabPagePretendo
+            // 
+            this.tabPagePretendo.Controls.Add(this.textBoxPretendo);
+            this.tabPagePretendo.Location = new System.Drawing.Point(4, 22);
+            this.tabPagePretendo.Name = "tabPagePretendo";
+            this.tabPagePretendo.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPagePretendo.Size = new System.Drawing.Size(768, 371);
+            this.tabPagePretendo.TabIndex = 2;
+            this.tabPagePretendo.Text = "Pretendo++";
+            this.tabPagePretendo.UseVisualStyleBackColor = true;
+            // 
             // textBoxPretendo
             // 
             this.textBoxPretendo.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -160,6 +149,17 @@
             this.textBoxPretendo.Size = new System.Drawing.Size(768, 371);
             this.textBoxPretendo.TabIndex = 1;
             this.textBoxPretendo.WordWrap = false;
+            // 
+            // tabPageCaddy
+            // 
+            this.tabPageCaddy.Controls.Add(this.textBoxCaddy);
+            this.tabPageCaddy.Location = new System.Drawing.Point(4, 22);
+            this.tabPageCaddy.Name = "tabPageCaddy";
+            this.tabPageCaddy.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPageCaddy.Size = new System.Drawing.Size(768, 371);
+            this.tabPageCaddy.TabIndex = 3;
+            this.tabPageCaddy.Text = "Caddy";
+            this.tabPageCaddy.UseVisualStyleBackColor = true;
             // 
             // textBoxCaddy
             // 
@@ -207,7 +207,7 @@
             this.Controls.Add(this.tabControlProcesses);
             this.Controls.Add(this.buttonStart);
             this.Name = "SmmServer";
-            this.Text = "SmmServer v0.1";
+            this.Text = "SmmServer v0.2";
             this.tabControlProcesses.ResumeLayout(false);
             this.tabPageSmm.ResumeLayout(false);
             this.tabPageSmm.PerformLayout();
