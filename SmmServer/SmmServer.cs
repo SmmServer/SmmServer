@@ -8,13 +8,14 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using System.Threading;
 
 namespace SmmServer
 {
     public partial class SmmServer : Form
     {
         private List<Process> _processes = new List<Process>();
-        private List<StreamWriter> _logStreams = new List<StreamWriter>();
+        private Dictionary<string, StreamWriter> _logStreams = new Dictionary<string, StreamWriter>();
 
 #if DEBUG
         private string _pythonDir = @"d:\WiiU\SmmServerFinal\python-3.7.5-embed-win32";
@@ -56,9 +57,9 @@ namespace SmmServer
             base.OnClosed(e);
         }
 
-        private delegate void AppendLine(string line);
+        public delegate void AppendLine(string line);
 
-        private void doProcess(string filename, string arguments, string workingDir, AppendLine output)
+        private Process doProcess(string filename, string arguments, string workingDir, AppendLine output)
         {
             var process = Process.Start(new ProcessStartInfo
             {
@@ -80,20 +81,21 @@ namespace SmmServer
                 pids = File.ReadAllLines(_pidsFile).ToList();
             pids.Add(process.Id.ToString());
             File.WriteAllLines(_pidsFile, pids.ToArray());
+            return process;
         }
 
-        private void python(string script, AppendLine output)
+        private Process python(string script, AppendLine output)
         {
             var workingDir = Path.GetDirectoryName(script);
             Environment.SetEnvironmentVariable("PYTHONHOME", _pythonDir);
             var filename = Path.Combine(_pythonDir, "python.exe");
-            doProcess(filename, $"\"{script}\"", workingDir, output);
+            return doProcess(filename, $"\"{script}\"", workingDir, output);
         }
 
-        private void exec(string exe, AppendLine output)
+        private Process exec(string exe, AppendLine output)
         {
             var workingDir = Path.GetDirectoryName(exe);
-            doProcess(exe, "", workingDir, output);
+            return doProcess(exe, "", workingDir, output);
         }
 
         private void stopProcesses()
@@ -117,17 +119,28 @@ namespace SmmServer
                 File.Delete(_pidsFile);
 
             foreach (var logStream in _logStreams)
-                logStream.Close();
+                logStream.Value.Close();
             _logStreams.Clear();
+        }
+
+        StreamWriter findOrCreateStream(TabPage tab)
+        {
+            var logFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, tab.Text.TrimEnd('*') + ".log");
+            if (!_logStreams.ContainsKey(logFile))
+            {
+                var logStream = new StreamWriter(logFile, true);
+                logStream.AutoFlush = true;
+                _logStreams.Add(logFile, logStream);
+            }
+            return _logStreams[logFile];
         }
 
         AppendLine makeControlOutput(TabPage tab, TextBox textBox)
         {
-            var logStream = new StreamWriter(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, tab.Text.TrimEnd('*') + ".log"), true);
-            _logStreams.Add(logStream);
+            var logStream = findOrCreateStream(tab);
             return line => textBox.InvokeIfRequired(tb =>
             {
-                var newline = line + "\n";
+                var newline = line.Replace("\r", "").Replace("\n", "\r\n") + "\r\n";
                 logStream.Write(newline);
                 tb.AppendText(newline);
                 tabUpdated(tab);
@@ -153,7 +166,7 @@ namespace SmmServer
                                 var process = Process.GetProcessById(pid);
                                 if (processNames.Contains(process.ProcessName))
                                 {
-                                    textBoxSmm.AppendText($"Killing {process.ProcessName} ({pid})\n");
+                                    textBoxSmm.AppendText($"Killing {process.ProcessName} ({pid})\r\n");
                                     process.Kill();
                                 }
                             }
@@ -170,29 +183,14 @@ namespace SmmServer
                 exec(Path.Combine(_caddyDir, "caddy.exe"), makeControlOutput(tabPageCaddy, textBoxCaddy));
                 exec(Path.Combine(_nintendoClientsDir, "Pretendo++.exe"), makeControlOutput(tabPagePretendo, textBoxPretendo));
                 buttonStart.Text = "Started";
+
+                // Enable debug button after 2 seconds
+                new Thread(() =>
+                {
+                    Thread.Sleep(2000);
+                    buttonDebug.InvokeIfRequired(button => button.Enabled = true);
+                }).Start();
             }
-        }
-
-        private void button1_Click(object sender, EventArgs e)
-        {
-            tabUpdated(tabPageSmm);
-        }
-
-        private void buttonClear_Click(object sender, EventArgs e)
-        {
-            void clearTab(TabPage tab, TextBox textBox)
-            {
-                textBox.Clear();
-                tab.Text = tab.Text.TrimEnd('*');
-            }
-
-            clearTab(tabPageSmm, textBoxSmm);
-            clearTab(tabPageFriends, textBoxFriends);
-            clearTab(tabPagePretendo, textBoxPretendo);
-            clearTab(tabPageCaddy, textBoxCaddy);
-
-            foreach (var logStream in _logStreams)
-                logStream.Flush();
         }
 
         private void buttonCemu_Click(object sender, EventArgs e)
@@ -207,6 +205,34 @@ namespace SmmServer
         private void linkLabelWebsite_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             Process.Start("https://smmserver.github.io");
+        }
+
+        private void buttonDebug_Click(object sender, EventArgs e)
+        {
+            buttonDebug.Enabled = false;
+            tabControlProcesses.SelectedTab = tabPageDebug;
+            var debugOutput = makeControlOutput(tabPageDebug, textBoxDebug);
+            new Thread(() =>
+            {
+                debugOutput("[Debug] Wait until you see 'Finished!' and the debug button is re-enabled\r\n");
+
+                debugOutput("[Debug] Attempting NEX friend service login...");
+                python(Path.Combine(_nintendoClientsDir, "example_friend_login.py"), debugOutput).WaitForExit();
+
+                debugOutput("[Debug] Attempting NEX SMM service login...");
+                python(Path.Combine(_nintendoClientsDir, "example_smm_login.py"), debugOutput).WaitForExit();
+
+                debugOutput("[Debug] Attempting HTTPS connection...");
+                SslTcpClient.Output = debugOutput;
+                SslTcpClient.RunClient("127.0.0.1", "account.nintendo.net");
+                debugOutput("");
+
+                debugOutput("[Debug] Attempting full service test...");
+                python(Path.Combine(_nintendoClientsDir, "smm_example_public.py"), debugOutput).WaitForExit();
+
+                debugOutput("[Debug] Finished, please send all the .log files!");
+                buttonDebug.InvokeIfRequired(button => button.Enabled = true);
+            }).Start();
         }
     }
 }

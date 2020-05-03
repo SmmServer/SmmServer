@@ -38,13 +38,17 @@
             this.textBoxPretendo = new System.Windows.Forms.TextBox();
             this.tabPageCaddy = new System.Windows.Forms.TabPage();
             this.textBoxCaddy = new System.Windows.Forms.TextBox();
+            this.tabPageDebug = new System.Windows.Forms.TabPage();
+            this.textBoxDebug = new System.Windows.Forms.TextBox();
             this.buttonCemu = new System.Windows.Forms.Button();
             this.linkLabelWebsite = new System.Windows.Forms.LinkLabel();
+            this.buttonDebug = new System.Windows.Forms.Button();
             this.tabControlProcesses.SuspendLayout();
             this.tabPageSmm.SuspendLayout();
             this.tabPageFriends.SuspendLayout();
             this.tabPagePretendo.SuspendLayout();
             this.tabPageCaddy.SuspendLayout();
+            this.tabPageDebug.SuspendLayout();
             this.SuspendLayout();
             // 
             // buttonStart
@@ -66,6 +70,7 @@
             this.tabControlProcesses.Controls.Add(this.tabPageFriends);
             this.tabControlProcesses.Controls.Add(this.tabPagePretendo);
             this.tabControlProcesses.Controls.Add(this.tabPageCaddy);
+            this.tabControlProcesses.Controls.Add(this.tabPageDebug);
             this.tabControlProcesses.Location = new System.Drawing.Point(12, 41);
             this.tabControlProcesses.Name = "tabControlProcesses";
             this.tabControlProcesses.SelectedIndex = 0;
@@ -176,6 +181,32 @@
             this.textBoxCaddy.TabIndex = 1;
             this.textBoxCaddy.WordWrap = false;
             // 
+            // tabPageDebug
+            // 
+            this.tabPageDebug.Controls.Add(this.textBoxDebug);
+            this.tabPageDebug.Location = new System.Drawing.Point(4, 22);
+            this.tabPageDebug.Name = "tabPageDebug";
+            this.tabPageDebug.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPageDebug.Size = new System.Drawing.Size(768, 371);
+            this.tabPageDebug.TabIndex = 4;
+            this.tabPageDebug.Text = "Debug";
+            this.tabPageDebug.UseVisualStyleBackColor = true;
+            // 
+            // textBoxDebug
+            // 
+            this.textBoxDebug.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.textBoxDebug.Font = new System.Drawing.Font("Lucida Console", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.textBoxDebug.Location = new System.Drawing.Point(0, 0);
+            this.textBoxDebug.Multiline = true;
+            this.textBoxDebug.Name = "textBoxDebug";
+            this.textBoxDebug.ReadOnly = true;
+            this.textBoxDebug.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.textBoxDebug.Size = new System.Drawing.Size(768, 371);
+            this.textBoxDebug.TabIndex = 2;
+            this.textBoxDebug.WordWrap = false;
+            // 
             // buttonCemu
             // 
             this.buttonCemu.Location = new System.Drawing.Point(93, 12);
@@ -189,7 +220,7 @@
             // linkLabelWebsite
             // 
             this.linkLabelWebsite.AutoSize = true;
-            this.linkLabelWebsite.Location = new System.Drawing.Point(174, 17);
+            this.linkLabelWebsite.Location = new System.Drawing.Point(255, 17);
             this.linkLabelWebsite.Name = "linkLabelWebsite";
             this.linkLabelWebsite.Size = new System.Drawing.Size(46, 13);
             this.linkLabelWebsite.TabIndex = 5;
@@ -197,17 +228,29 @@
             this.linkLabelWebsite.Text = "&Website";
             this.linkLabelWebsite.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabelWebsite_LinkClicked);
             // 
+            // buttonDebug
+            // 
+            this.buttonDebug.Enabled = false;
+            this.buttonDebug.Location = new System.Drawing.Point(174, 12);
+            this.buttonDebug.Name = "buttonDebug";
+            this.buttonDebug.Size = new System.Drawing.Size(75, 23);
+            this.buttonDebug.TabIndex = 6;
+            this.buttonDebug.Text = "&Debug";
+            this.buttonDebug.UseVisualStyleBackColor = true;
+            this.buttonDebug.Click += new System.EventHandler(this.buttonDebug_Click);
+            // 
             // SmmServer
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.buttonDebug);
             this.Controls.Add(this.linkLabelWebsite);
             this.Controls.Add(this.buttonCemu);
             this.Controls.Add(this.tabControlProcesses);
             this.Controls.Add(this.buttonStart);
             this.Name = "SmmServer";
-            this.Text = "SmmServer v0.2";
+            this.Text = "SmmServer v0.3";
             this.tabControlProcesses.ResumeLayout(false);
             this.tabPageSmm.ResumeLayout(false);
             this.tabPageSmm.PerformLayout();
@@ -217,6 +260,8 @@
             this.tabPagePretendo.PerformLayout();
             this.tabPageCaddy.ResumeLayout(false);
             this.tabPageCaddy.PerformLayout();
+            this.tabPageDebug.ResumeLayout(false);
+            this.tabPageDebug.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -236,6 +281,9 @@
         private System.Windows.Forms.TextBox textBoxCaddy;
         private System.Windows.Forms.Button buttonCemu;
         private System.Windows.Forms.LinkLabel linkLabelWebsite;
+        private System.Windows.Forms.TabPage tabPageDebug;
+        private System.Windows.Forms.TextBox textBoxDebug;
+        private System.Windows.Forms.Button buttonDebug;
     }
 }
 
