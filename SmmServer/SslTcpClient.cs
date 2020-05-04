@@ -34,21 +34,34 @@ namespace SmmServer
 
         public static void RunClient(string machineName, string serverName)
         {
-            // Create a TCP/IP client socket.
-            // machineName is the host running the server application.
-            TcpClient client = new TcpClient(machineName, 443);
-            Output("TCP Client connected.");
-            // Create an SSL stream that will close the client's stream.
-            SslStream sslStream = new SslStream(
-                client.GetStream(),
-                false,
-                new RemoteCertificateValidationCallback(ValidateServerCertificate),
-                null
-                );
-            // The server name must match the name on the server certificate.
+            TcpClient client = null;
             try
             {
+                // Create a TCP/IP client socket.
+                // machineName is the host running the server application.
+                client = new TcpClient(machineName, 443);
+                Output("TCP Client connected.");
+                // Create an SSL stream that will close the client's stream.
+                SslStream sslStream = new SslStream(
+                    client.GetStream(),
+                    false,
+                    new RemoteCertificateValidationCallback(ValidateServerCertificate),
+                    null
+                    );
+                // The server name must match the name on the server certificate.
                 sslStream.AuthenticateAsClient(serverName, null, (SslProtocols)0x00000C00, false);
+                // Encode a test message into a byte array.
+                // Signal the end of the message using the "<EOF>".
+                byte[] messsage = Encoding.UTF8.GetBytes("GET /ping HTTP/1.1\r\nHost: account.nintendo.net\r\n\r\n");
+                // Send hello message to the server. 
+                sslStream.Write(messsage);
+                sslStream.Flush();
+                // Read message from the server.
+                string serverMessage = ReadMessage(sslStream);
+                Output($"Server response:\r\n{serverMessage}");
+                // Close the client connection.
+                client.Close();
+                Output("\r\nTCP Client closed.");
             }
             catch (Exception e)
             {
@@ -58,21 +71,9 @@ namespace SmmServer
                     Output($"Inner exception: {e.InnerException.Message}");
                 }
                 Output("Authentication failed - closing the connection.");
-                client.Close();
-                return;
+                if (client != null)
+                    client.Close();
             }
-            // Encode a test message into a byte array.
-            // Signal the end of the message using the "<EOF>".
-            byte[] messsage = Encoding.UTF8.GetBytes("GET /ping HTTP/1.1\r\nHost: account.nintendo.net\r\n\r\n");
-            // Send hello message to the server. 
-            sslStream.Write(messsage);
-            sslStream.Flush();
-            // Read message from the server.
-            string serverMessage = ReadMessage(sslStream);
-            Output($"Server response:\r\n{serverMessage}");
-            // Close the client connection.
-            client.Close();
-            Output("\r\nTCP Client closed.");
         }
 
         static string ReadMessage(SslStream sslStream)
