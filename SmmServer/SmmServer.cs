@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.Threading;
+using SmmServer.Properties;
 
 namespace SmmServer
 {
@@ -18,10 +19,10 @@ namespace SmmServer
         private Dictionary<string, StreamWriter> _logStreams = new Dictionary<string, StreamWriter>();
 
 #if DEBUG
-        private string _pythonDir = @"d:\WiiU\SmmServerFinal\python-3.7.5-embed-win32";
-        private string _caddyDir = @"d:\WiiU\SmmServerFinal\Caddy";
-        private string _nintendoClientsDir = @"c:\CodeBlocks\NintendoClients";
-        private string _cemuDir = @"d:\WiiU\cemu_1.15.17";
+        private string _pythonDir = Settings.Default.PythonDir;
+        private string _caddyDir = Settings.Default.CaddyDir;
+        private string _nintendoClientsDir = Settings.Default.NintendoClientsDir;
+        private string _cemuDir = Settings.Default.CemuDir;
 #else
         private string _pythonDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "python-3.7.5-embed-win32");
         private string _caddyDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Caddy");
@@ -149,9 +150,14 @@ namespace SmmServer
 
         private void buttonStart_Click(object sender, EventArgs e)
         {
+            // Under normal circumstances this should do nothing, in debug mode it will act as restart
+            stopProcesses();
+
             if (_processes.Count == 0)
             {
+#if !DEBUG
                 buttonStart.Enabled = false;
+#endif // DEBUG
                 if (File.Exists(_pidsFile))
                 {
                     var pids = File.ReadAllLines(_pidsFile);
@@ -182,7 +188,11 @@ namespace SmmServer
                 python(Path.Combine(_nintendoClientsDir, "example_friend_server.py"), makeControlOutput(tabPageFriends, textBoxFriends));
                 exec(Path.Combine(_caddyDir, "caddy.exe"), makeControlOutput(tabPageCaddy, textBoxCaddy));
                 exec(Path.Combine(_nintendoClientsDir, "Pretendo++.exe"), makeControlOutput(tabPagePretendo, textBoxPretendo));
+#if DEBUG
+                buttonStart.Text = "Restart";
+#else
                 buttonStart.Text = "Started";
+#endif // DEBUG
 
                 // Enable debug button after 2 seconds
                 new Thread(() =>
