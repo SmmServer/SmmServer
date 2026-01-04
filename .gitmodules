@@ -1,0 +1,6 @@
+[submodule "NintendoClients"]
+	path = NintendoClients
+	url = https://github.com/SmmServer/NintendoClients
+[submodule "Cemu"]
+	path = Cemu
+	url = https://github.com/SmmServer/FakeOnlineFiles
