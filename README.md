@@ -8,4 +8,4 @@ Open source private server for Super Mario Maker, integrated with [smmdb](https:
 
 ## Compiling
 
-First, create a venv with `python -m venv venv`, install the required dependencies with `pip install -r requirements.txt`, then compile with `python -m PyInstaller SmmServer.spec
+First, create a venv with `python -m venv venv`, enter the venv with `venv/Scripts/Activate.ps1`,  install the required dependencies with `pip install -r requirements.txt`, then compile with `python -m PyInstaller SmmServer.spec
