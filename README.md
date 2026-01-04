@@ -1,7 +1,11 @@
 # SmmServer
 
-Open source private server for Super Mario Maker, integrated with [smmdb](https://smmdb.ddns.net) and [Cemu](https://cemu.info).
+Open source private server for Super Mario Maker, integrated with [smmdb](https://smmdb.net) and [Cemu](https://cemu.info).
 
-![screenshot](https://i.imgur.com/7qUAofa.png)
+![screenshot](https://i.imgur.com/hmaCINN.png)
 
 ![cemu](https://i.imgur.com/DqrNdic.png)
+
+## Compiling
+
+First, create a venv with `python -m venv venv`, install the required dependencies with `pip install -r requirements.txt`, then compile with `python -m PyInstaller SmmServer.spec
