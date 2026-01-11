@@ -2,3 +2,7 @@
 bin/
 obj/
 *.user
+
+# PyInstaller
+/build/
+/dist/

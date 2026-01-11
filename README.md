@@ -8,5 +8,14 @@ Open source private server for Super Mario Maker, integrated with [smmdb](https:
 
 ## Compiling
 
+Install [`uv`](https://docs.astral.sh/uv/), then:
 
-First, create a venv with `python -m venv venv`, enter the venv with `venv/Scripts/Activate.ps1`,  install the required dependencies with `pip install -r requirements.txt`, then compile with `python -m PyInstaller SmmServer.spec`
+```bash
+# Create venv with dependencies
+uv sync
+
+# Create package
+uv run PyInstaller SmmServer.spec
+```
+
+The release package also has a copy of [Cemu 2.6](https://github.com/cemu-project/Cemu/releases/tag/v2.6) and a few configuration files.
