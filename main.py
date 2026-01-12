@@ -41,7 +41,7 @@ else:
     BASE_DIR = APP_DIR
 
 CLIENTS_DIR = os.path.join(BASE_DIR, "NintendoClients")
-CERTS_DIR = resource_path("Certs") 
+CERTS_DIR = resource_path("Certs")
 CONFIGS_DIR = os.path.join(APP_DIR, "Configs")
 SETTINGS_INI_PATH = os.path.join(CONFIGS_DIR, "settings.ini")
 LOG_FILE_PATH = os.path.join(APP_DIR, "debug_log.txt")
@@ -61,7 +61,7 @@ class HybridLogger:
         self.terminal = sys.stdout
         self.log_to_file = log_to_file
         self.lock = threading.Lock()
-        
+
         if self.log_to_file:
             try:
                 self.file_handle = open(LOG_FILE_PATH, "a", encoding="utf-8", buffering=1)
@@ -76,7 +76,7 @@ class HybridLogger:
                     self.terminal.write(message)
                     self.terminal.flush()
             except: pass
-            
+
             if self.log_to_file:
                 try:
                     self.file_handle.write(message)
@@ -248,7 +248,7 @@ class ElevatedWorker:
             self.stop_proxy()
             time.sleep(0.5)
         self.running_proxy = True
-        
+
         class ProxyHandler(BaseHTTPRequestHandler):
             def log_message(self, fmt, *args):
                 print(f"[Proxy] {self.command} {self.path} - {args[1]}", flush=True)
@@ -267,7 +267,7 @@ class ElevatedWorker:
                     if 'Content-Length' in s.headers:
                         try: data = s.rfile.read(int(s.headers['Content-Length']))
                         except: pass
-                    
+
                     req = urllib.request.Request(target_url, data=data, headers=req_headers, method=s.command)
                     with urllib.request.urlopen(req, timeout=15) as resp:
                         s.send_response(resp.status)
@@ -293,7 +293,7 @@ class ElevatedWorker:
 
         cert_file = os.path.join(CERTS_DIR, "account.nintendo.net.crt")
         key_file = os.path.join(CERTS_DIR, "account.nintendo.net.pem")
-        
+
         ctx = None
         try:
             if os.path.exists(cert_file) and os.path.exists(key_file):
@@ -301,12 +301,12 @@ class ElevatedWorker:
                 ctx.load_cert_chain(cert_file, key_file)
             else:
                 self.log(f"[Proxy] Certificates not found in {CERTS_DIR}")
-        except Exception as e: 
+        except Exception as e:
             self.log(f"[Proxy] SSL Error: {e}")
 
         threading.Thread(target=spawn_server, args=(IPv4HTTPServer, 80, False), daemon=True).start()
         threading.Thread(target=spawn_server, args=(IPv4HTTPServer, 443, True, ctx), daemon=True).start()
-        
+
         if socket.has_ipv6:
             threading.Thread(target=spawn_server, args=(IPv6HTTPServer, 80, False), daemon=True).start()
             threading.Thread(target=spawn_server, args=(IPv6HTTPServer, 443, True, ctx), daemon=True).start()
@@ -343,20 +343,20 @@ class ServerManager:
         self.running = False
         self.subprocesses = []
         self.elevated_worker = None
-        
+
         self.dirs = { "clients": CLIENTS_DIR }
         os.makedirs(self.dirs['clients'], exist_ok=True)
         os.makedirs(CONFIGS_DIR, exist_ok=True)
-        
+
         ini_path = os.path.join(CONFIGS_DIR, "Pretendo++.ini")
         if not os.path.exists(ini_path):
             with open(ini_path, "w") as f: f.write(DEFAULT_INI)
 
-    def log(self, tab, msg): 
+    def log(self, tab, msg):
         if msg is None: return
         clean_msg = msg.replace('\x00', '').strip()
         if "Successfully saved" in clean_msg or "Downloading" in clean_msg:
-            print(f"[{tab}] {clean_msg}") 
+            print(f"[{tab}] {clean_msg}")
             return
         if clean_msg:
             self.log_queue.put((tab, clean_msg))
@@ -375,10 +375,10 @@ class ServerManager:
 
     def start_elevated_worker(self):
         if self.elevated_worker and self.elevated_worker.poll() is None: return
-        
+
         cmd = get_base_cmd() + ["--start"]
         if sys.platform != 'win32': cmd = ['pkexec', 'env', 'PYTHONUNBUFFERED=1'] + cmd
-        
+
         try:
             flags = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
             si = subprocess.STARTUPINFO() if sys.platform == 'win32' else None
@@ -386,13 +386,13 @@ class ServerManager:
             env = os.environ.copy()
             env["PYTHONUNBUFFERED"] = "1"
             env["PYTHONIOENCODING"] = "utf-8"
-            
+
             self.elevated_worker = subprocess.Popen(
                 cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, bufsize=1, creationflags=flags, startupinfo=si, env=env, 
+                text=True, bufsize=1, creationflags=flags, startupinfo=si, env=env,
                 cwd=APP_DIR, encoding='utf-8', errors='ignore'
             )
-            
+
             def worker_reader():
                 if not self.elevated_worker or not self.elevated_worker.stdout: return
                 try:
@@ -430,7 +430,7 @@ class ServerManager:
         self.running = True
         self.log("Debug", "Starting services...")
         self.start_elevated_worker()
-        time.sleep(0.5) 
+        time.sleep(0.5)
         self.send_worker_cmd("CMD:STOP_PROXY")
         self.send_worker_cmd("CMD:NUKE")
         time.sleep(0.8)
@@ -462,14 +462,14 @@ class ServerManager:
         else:
             cmd = [sys.executable, script_path]
             cwd = self.dirs['clients']
-        
+
         self.spawn_command(name, cmd, cwd)
 
     def spawn_command(self, name, command, cwd):
         def reader(proc, tab_name):
             try:
                 for line in proc.stdout:
-                    if line: 
+                    if line:
                         clean_line = line.strip().replace('\x00', '')
                         if clean_line:
                             self.log(tab_name, clean_line)
@@ -482,7 +482,7 @@ class ServerManager:
             env = os.environ.copy()
             env["PYTHONUNBUFFERED"] = "1"
             env["PYTHONIOENCODING"] = "utf-8"
-            
+
             proc = subprocess.Popen(
                 command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE,
                 text=True, bufsize=1, cwd=cwd, env=env, creationflags=flags,
@@ -525,7 +525,7 @@ class ServerManager:
                             content_type = self.headers.get('Content-Type')
                             length = int(self.headers.get('Content-Length', 0))
                             body = b""
-                            
+
                             if 'chunked' in self.headers.get('Transfer-Encoding', '').lower():
                                 while True:
                                     line = self.rfile.readline()
@@ -547,20 +547,20 @@ class ServerManager:
 
                             ash0_starts = [m.start() for m in re.finditer(b'ASH0', body)]
                             final_payload = None
-                            
+
                             if len(ash0_starts) >= 4:
                                 chunks = []
                                 for i in range(len(ash0_starts)):
                                     start = ash0_starts[i]
                                     end = ash0_starts[i+1] if i + 1 < len(ash0_starts) else len(body)
                                     chunks.append(body[start:end])
-                                    
+
                                 try:
                                     c_thumb0 = smmdb.ash0_decompress(chunks[0])
                                     c_data = smmdb.ash0_decompress(chunks[1])
                                     c_sub = smmdb.ash0_decompress(chunks[2])
                                     c_thumb1 = smmdb.ash0_decompress(chunks[3])
-                                    
+
                                     if c_data:
                                         zip_buffer = io.BytesIO()
                                         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -571,7 +571,7 @@ class ServerManager:
                                         final_payload = zip_buffer.getvalue()
                                         print(f"[Pretendo] Prepared SMMDB upload package.", flush=True)
                                 except: pass
-                            
+
                             if not final_payload and len(ash0_starts) > 0:
                                 final_payload = smmdb.ash0_decompress(body[ash0_starts[0]:])
 
@@ -585,12 +585,12 @@ class ServerManager:
                                     'Referer': 'https://smmdb.net/upload'
                                 }
                                 if api_key: headers['Authorization'] = f'APIKEY {api_key}'
-                                
+
                                 requests.post("https://smmdb.net/api/uploadcourse", headers=headers, data=final_payload, timeout=60)
                                 print(f"[Pretendo] Course sent to SMMDB.", flush=True)
                                 self.respond(200, "text/plain", b"OK", method)
                                 return
-                            
+
                             self.respond(200, "text/plain", b"OK", method)
                         except Exception as e:
                             print(f"[Pretendo] Upload error: {e}", flush=True)
@@ -626,20 +626,20 @@ class ServerManager:
 
                     if method == "POST" and parsed.path == "/post":
                         try:
-                            content_type = self.headers.get('Content-Type')
+                            content_type = self.headers.get('Content-Type', '')
                             length = int(self.headers.get('Content-Length', 0))
                             body = self.rfile.read(length)
-                            
+
                             if 'multipart/form-data' in content_type:
                                 msg = email.message_from_bytes(
-                                    b'MIME-Version: 1.0\r\n' + 
-                                    f'Content-Type: {content_type}\r\n'.encode() + 
+                                    b'MIME-Version: 1.0\r\n' +
+                                    f'Content-Type: {content_type}\r\n'.encode() +
                                     b'\r\n' + body
                                 )
-                                
+
                                 for part in msg.walk():
                                     if part.get_content_disposition() == 'form-data' and part.get_param('name') == 'file':
-                                        data = part.get_payload(decode=True)
+                                        data: bytes = part.get_payload(decode=True) # type: ignore
                                         filename = f"file{int(time.time())}.bin"
                                         save_path = os.path.join(www_save_dir, filename)
                                         with open(save_path, "wb") as f:
@@ -657,9 +657,9 @@ class ServerManager:
                         if parsed.path.startswith("/smm/course/") and search_filename.isdigit():
                             try: search_filename = "{:011d}-00001".format(int(search_filename))
                             except: pass
-                        
+
                         found_path = None
-                        
+
                         search_dirs = [www_save_dir]
                         if os.path.exists(CLIENTS_DIR):
                             search_dirs.append(os.path.join(CLIENTS_DIR, "www"))
@@ -672,7 +672,7 @@ class ServerManager:
                                         break
                             if found_path:
                                 break
-                        
+
                         if found_path:
                             try:
                                 with open(found_path, "rb") as f: data = f.read()
@@ -684,7 +684,7 @@ class ServerManager:
                             else:
                                 self.respond(404, "text/plain", b"Not Found", method)
                         return
-                    
+
                     self.respond(404, "text/plain", b"Not Found", method)
                 except Exception as e: print(f"Error Request: {e}", flush=True)
 
@@ -752,18 +752,18 @@ class App(ctk.CTk):
         self.minsize(1000, 750)
         self.configure(fg_color=M3_BG)
         ctk.set_appearance_mode("Dark")
-        
+
         try:
             self.iconbitmap(resource_path("mushroom.ico"))
         except: pass
-        
+
         self.log_queue = queue.Queue()
         self.progress_queue = queue.Queue()
-        
+
         self.manager = ServerManager(self.log_queue, self)
         self.hosts_mgr = HostsManager()
         self.cemu_mgr = CemuManager(APP_DIR)
-        
+
         t = threading.Thread(target=self.manager.start_elevated_worker, daemon=True)
         t.start()
 
@@ -807,7 +807,7 @@ class App(ctk.CTk):
         self.tab_buttons = {}
         for tab in self.tabs:
             btn = ctk.CTkButton(self.tabs_container, text=f"  {tab}", command=lambda t=tab: self.switch_tab(t), fg_color=M3_SURFACE_VARIANT if tab == "SMM" else "transparent", text_color="#E6E1E5", hover_color=M3_SURFACE_VARIANT, anchor="w", corner_radius=24, height=48, font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"))
-            btn.pack(fill="x", pady=2) 
+            btn.pack(fill="x", pady=2)
             self.tab_buttons[tab] = btn
         self.spacer = ctk.CTkLabel(self.sidebar_frame, text="")
         self.spacer.pack(expand=True, fill="both")
@@ -853,7 +853,7 @@ class App(ctk.CTk):
             for tab, lines in messages_by_tab.items():
                 full_text = "".join(lines)
                 self.log_buffers.setdefault(tab, []).extend(lines)
-                if len(self.log_buffers[tab]) > 1000: 
+                if len(self.log_buffers[tab]) > 1000:
                     self.log_buffers[tab] = self.log_buffers[tab][-1000:]
                 if tab == self.current_tab:
                     self.console.configure(state="normal")
@@ -864,7 +864,7 @@ class App(ctk.CTk):
                     self.console.configure(state="disabled")
         except Exception: pass
         self.after(100, self.check_queue)
-    
+
     def update_progress_bar(self):
         try:
             while not self.progress_queue.empty():
@@ -875,11 +875,11 @@ class App(ctk.CTk):
                 else:
                     self.progress_label.configure(text=f"{message}")
                     self.progress_bar.set(0)
-                
+
                 is_bootstrapping = (message == "Bootstrapping Cache" and value < total)
-                
+
                 if is_bootstrapping:
-                    self.status_container.configure(fg_color="#3c342e") 
+                    self.status_container.configure(fg_color="#3c342e")
                     self.status_dot.configure(text_color=M3_WARNING)
                     self.status_lbl.configure(text="Caching", text_color=M3_WARNING)
                     self.btn_server.configure(state="disabled", text="Caching...")
@@ -952,27 +952,27 @@ class App(ctk.CTk):
         window.transient(self)
         window.wait_visibility()
         window.grab_set()
-        
+
         ctk.CTkLabel(window, text="Settings", font=(FONT_FAMILY, 20, "bold"), text_color="#E6E1E5").pack(pady=20)
-        
+
         source_frame = ctk.CTkFrame(window, fg_color=M3_SURFACE, corner_radius=12)
         source_frame.pack(padx=20, pady=10, fill="x")
         ctk.CTkLabel(source_frame, text="Course Source", font=(FONT_FAMILY, 14, "bold"), text_color="#E6E1E5").pack(pady=(15, 5))
         self.source_var = ctk.StringVar(value=read_setting('General', 'CourseSource', 'SMMDB'))
         ctk.CTkRadioButton(source_frame, text="Nintendo Course World", variable=self.source_var, value="CourseWorld", command=self.on_setting_change).pack(anchor="w", padx=20, pady=5)
         ctk.CTkRadioButton(source_frame, text="SMMDB", variable=self.source_var, value="SMMDB", command=self.on_setting_change).pack(anchor="w", padx=20, pady=(5, 15))
-        
+
         apikey_frame = ctk.CTkFrame(window, fg_color=M3_SURFACE, corner_radius=12)
         apikey_frame.pack(padx=20, pady=10, fill="x")
         ctk.CTkLabel(apikey_frame, text="SMMDB API Key", font=(FONT_FAMILY, 14, "bold"), text_color="#E6E1E5").pack(pady=(15, 5))
         self.apikey_var = ctk.StringVar(value=read_setting('General', 'SmmdbApiKey', ''))
         entry = ctk.CTkEntry(apikey_frame, textvariable=self.apikey_var, show="*")
         entry.pack(fill="x", padx=20, pady=5)
-        
+
         def save_apikey():
             write_setting('General', 'SmmdbApiKey', self.apikey_var.get())
             messagebox.showinfo("Success", "API Key Saved")
-            
+
         ctk.CTkButton(apikey_frame, text="Save Key", command=save_apikey, height=32, corner_radius=16).pack(pady=10, padx=20)
 
         hosts_frame = ctk.CTkFrame(window, fg_color=M3_SURFACE, corner_radius=12)
@@ -982,7 +982,7 @@ class App(ctk.CTk):
             self.manager.reset_hosts()
             messagebox.showinfo("Success", "Request sent.\nThe hosts file will be cleaned.")
         ctk.CTkButton(hosts_frame, text="Restore Hosts", command=revert_action, fg_color="#93000A", hover_color="#BA1A1A", text_color="#FFDAD6", height=40, corner_radius=20).pack(pady=15, padx=20, fill="x")
-        
+
         ctk.CTkButton(window, text="Close", command=window.destroy, fg_color="transparent", border_width=1, border_color=M3_SURFACE_VARIANT).pack(pady=20)
 
     def run_debug_tests(self):
@@ -1005,7 +1005,7 @@ class App(ctk.CTk):
             self.manager.log("Debug", "[Debug] Finished! Please send all the .log files if issues persist.")
             self.after(100, lambda: self.btn_debug.configure(state="normal"))
         threading.Thread(target=run_tests, daemon=True).start()
-    
+
     def on_close(self):
         try:
             self.manager.shutdown_worker()
@@ -1019,19 +1019,19 @@ def run_script_from_clients(script_name):
     if not os.path.exists(script_path):
         print(f"Error: Script not found at {script_path}")
         return
-    
+
     try:
         import runpy
         sys.path.insert(0, CLIENTS_DIR)
-        
+
         original_argv = sys.argv
         sys.argv = [script_path]
-        
+
         original_cwd = os.getcwd()
         os.chdir(CLIENTS_DIR)
-        
+
         runpy.run_path(script_path, run_name="__main__")
-        
+
         os.chdir(original_cwd)
         sys.argv = original_argv
     except Exception as e:
