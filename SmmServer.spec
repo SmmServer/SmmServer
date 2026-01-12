@@ -36,7 +36,8 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='mushroom.ico'
+    icon='mushroom.ico',
+    exclude_binaries=True,
 )
 
 coll = COLLECT(
@@ -46,5 +47,5 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name='SmmServer'
+    name='SmmServer',
 )
