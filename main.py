@@ -652,27 +652,43 @@ class ServerManager:
                             self.respond(500, "text/plain", b"Server Error", method)
                         return
 
-                    if parsed.path.startswith("/smm/course/") or not parsed.path.startswith("/v1/api"):
-                        search_filename = os.path.basename(parsed.path)
-                        if parsed.path.startswith("/smm/course/") and search_filename.isdigit():
-                            try: search_filename = "{:011d}-00001".format(int(search_filename))
-                            except: pass
+                    if parsed.path.startswith("/smm/course/") or "datastore" in parsed.path or not parsed.path.startswith("/v1/api"):
+                        raw_name = os.path.basename(parsed.path)
+                        search_filename = raw_name
 
+                        if parsed.path.startswith("/smm/course/"):
+                            match = re.search(r'(\d+)', raw_name)
+                            if match:
+                                try:
+                                    course_id = int(match.group(1))
+                                    search_filename = "{:011d}-00001".format(course_id)
+                                except: pass
+                        
                         found_path = None
+                        
+                        datastore_dir = os.path.join(www_save_dir, "datastore")
+                        ds_try_path = os.path.join(datastore_dir, search_filename)
+                        if os.path.exists(ds_try_path):
+                            found_path = ds_try_path
 
-                        search_dirs = [www_save_dir]
-                        if os.path.exists(CLIENTS_DIR):
-                            search_dirs.append(os.path.join(CLIENTS_DIR, "www"))
+                        if not found_path:
+                            bases_to_check = [
+                                os.path.join(www_save_dir, "smmdb"), 
+                                os.path.join(www_save_dir, "courseworld")
+                            ]
+                            if os.path.exists(CLIENTS_DIR):
+                                bases_to_check.append(os.path.join(CLIENTS_DIR, "www", "smmdb"))
+                                bases_to_check.append(os.path.join(CLIENTS_DIR, "www", "courseworld"))
 
-                        for directory in search_dirs:
-                            if os.path.exists(directory):
-                                for root, _, files in os.walk(directory):
-                                    if search_filename in files:
-                                        found_path = os.path.join(root, search_filename)
+                            for base in bases_to_check:
+                                if not os.path.exists(base): continue
+                                for i in range(4):
+                                    try_path = os.path.join(base, str(i), search_filename)
+                                    if os.path.exists(try_path):
+                                        found_path = try_path
                                         break
-                            if found_path:
-                                break
-
+                                if found_path: break
+                        
                         if found_path:
                             try:
                                 with open(found_path, "rb") as f: data = f.read()
@@ -680,7 +696,8 @@ class ServerManager:
                             except: self.respond(500, "text/plain", b"File Error", method)
                         else:
                             if "datastore" in parsed.path:
-                                self.respond(200, "application/octet-stream", b"", method)
+                                print(f"[Pretendo] Datastore file not found: {parsed.path}", flush=True)
+                                self.respond(404, "text/plain", b"Not Found", method)
                             else:
                                 self.respond(404, "text/plain", b"Not Found", method)
                         return
