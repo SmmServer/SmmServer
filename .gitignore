@@ -1,9 +1,13 @@
 bin/
 obj/
 *.user
-
-# PyInstaller
-/build/
-/dist/
 /debug_log.txt
 /Configs/settings.ini
+/Configs/Pretendo++.ini
+
+# PyInstaller
+/__pycache__/
+/build/
+/dist/
+*.log
+/Configs
