@@ -4,6 +4,8 @@ obj/
 /debug_log.txt
 /Configs/settings.ini
 /Configs/Pretendo++.ini
+/venv/
+/requirements.txt
 
 # PyInstaller
 /__pycache__/

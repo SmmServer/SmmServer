@@ -1,3 +1,5 @@
+--- START OF FILE main.py ---
+
 import sys
 import os
 import subprocess
@@ -38,7 +40,7 @@ else:
 CLIENTS_DIR = os.path.join(BASE_DIR, "NintendoClients")
 CONFIGS_DIR = os.path.join(APP_DIR, "Configs")
 SETTINGS_INI_PATH = os.path.join(CONFIGS_DIR, "settings.ini")
-LOG_FILE_PATH = os.path.join(APP_DIR, "debug_log.txt")
+LOG_FILE_PATH = os.path.join(APP_DIR, "Debug.log")
 
 # Define individual log paths
 LOG_SMM_PATH = os.path.join(APP_DIR, "NEX SMM.log")
@@ -147,69 +149,106 @@ class HybridLogger:
         self.print_to_stdout = print_to_stdout
         self.lock = threading.Lock()
         
-        try:
-            self.file_handle = open(LOG_FILE_PATH, "a", encoding="utf-8", buffering=1)
-        except:
-            self.file_handle = None
-
-    def _write_specific_log(self, filepath, message):
-        try:
-            with open(filepath, "a", encoding="utf-8") as f:
-                f.write(message + "\n")
-        except: pass
+        self.master_buffer = []
+        self.pretendo_buffer = []
+        self.proxy_buffer = []
+        self.smm_buffer = []
+        self.friends_buffer = []
 
     def write(self, message):
         if '\x00' in message: return
         if not message.strip(): return
         
         with self.lock:
-            # 1. Write to stdout
+            # 1. Write to actual stdout (console) if needed
             if self.print_to_stdout and self.terminal:
                 try:
                     self.terminal.write(message + "\n")
                     self.terminal.flush()
                 except: pass
 
-            # 2. Write to master debug log
-            if self.file_handle:
-                try:
-                    self.file_handle.write(message + "\n")
-                    self.file_handle.flush()
-                except: pass
-
-            # 3. Process tags and write to specific logs
+            # 2. Parse Tag from message "[Tag] Message"
             clean = message.strip()
             tag = "Debug"
+            content = clean
             
-            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+            if clean.startswith("[") and "]" in clean:
+                try:
+                    end_idx = clean.index("]")
+                    possible_tag = clean[1:end_idx]
+                    if possible_tag in ["Pretendo", "Proxy", "SMM", "Friends", "NEX-SMM", "NEX-Friends", "CacheStatus", "Debug"]:
+                        tag = possible_tag
+                        content = clean[end_idx+1:].strip()
+                except: pass
 
-            if "[CacheStatus]" in clean:
-                tag = "CacheStatus"
-                clean = clean.replace("[CacheStatus]", "").strip()
-            elif clean.startswith("[Pretendo]"): 
-                tag = "Pretendo"
-                clean = clean.replace("[Pretendo]", "").strip()
-                self._write_specific_log(LOG_PRETENDO_PATH, f"[{timestamp}] {clean}")
-            elif clean.startswith("[Proxy]"): 
-                tag = "Proxy"
-                clean = clean.replace("[Proxy]", "").strip()
-                self._write_specific_log(LOG_PROXY_PATH, f"[{timestamp}] {clean}")
-            elif "CacheManager" in clean:
-                clean = clean.replace("[CacheManager]", "").strip()
-            elif "SMM" in clean: 
-                tag = "SMM"
-                self._write_specific_log(LOG_SMM_PATH, f"[{timestamp}] {clean}")
-            elif "Friend" in clean: 
-                tag = "Friends"
-                self._write_specific_log(LOG_FRIENDS_PATH, f"[{timestamp}] {clean}")
+            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+            log_entry = f"[{timestamp}] {content}\n"
+
+            # 3. Routing Logic
+            gui_tag = "Debug" 
+
+            if tag == "Pretendo":
+                self.pretendo_buffer.append(log_entry)
+                gui_tag = "Pretendo"
             
+            elif tag == "Proxy":
+                self.proxy_buffer.append(log_entry)
+                gui_tag = "Proxy"
+            
+            elif tag == "NEX-SMM":
+                self.smm_buffer.append(log_entry)
+                self.master_buffer.append(f"[{timestamp}] [SMM] {content}\n")
+                gui_tag = "Debug"
+            
+            elif tag == "SMM":
+                self.smm_buffer.append(log_entry)
+                self.master_buffer.append(f"[{timestamp}] [SMM] {content}\n")
+                gui_tag = "SMM"
+
+            elif tag == "NEX-Friends":
+                self.friends_buffer.append(log_entry)
+                self.master_buffer.append(f"[{timestamp}] [Friends] {content}\n")
+                gui_tag = "Debug"
+            
+            elif tag == "Friends":
+                self.friends_buffer.append(log_entry)
+                self.master_buffer.append(f"[{timestamp}] [Friends] {content}\n")
+                gui_tag = "Friends"
+
+            elif tag == "CacheStatus":
+                gui_tag = "CacheStatus"
+
+            else:
+                self.master_buffer.append(log_entry)
+                gui_tag = "Debug"
+            
+            # 4. Enviar para GUI (Queue)
             if self.log_queue:
-                self.log_queue.put((tag, clean))
+                self.log_queue.put((gui_tag, content))
 
     def flush(self):
         with self.lock:
             if self.terminal: self.terminal.flush()
-            if self.file_handle: self.file_handle.flush()
+
+    def save_logs(self):
+        try:
+            with open(LOG_FILE_PATH, "w", encoding="utf-8") as f:
+                f.writelines(self.master_buffer)
+            
+            with open(LOG_PRETENDO_PATH, "w", encoding="utf-8") as f:
+                f.writelines(self.pretendo_buffer)
+            
+            with open(LOG_PROXY_PATH, "w", encoding="utf-8") as f:
+                f.writelines(self.proxy_buffer)
+
+            with open(LOG_SMM_PATH, "w", encoding="utf-8") as f:
+                f.writelines(self.smm_buffer)
+                
+            with open(LOG_FRIENDS_PATH, "w", encoding="utf-8") as f:
+                f.writelines(self.friends_buffer)
+                
+        except Exception as e:
+            print(f"Failed to save debug logs: {e}")
 
 class ServerManager:
     def __init__(self, log_queue=None):
@@ -221,8 +260,7 @@ class ServerManager:
         setup_configs()
 
     def log(self, tag, msg):
-        if self.log_queue: self.log_queue.put((tag, msg))
-        else: print(f"[{tag}] {msg}")
+        print(f"[{tag}] {msg}")
 
     def start_cache_manager(self, progress_queue=None):
         # Silent return if already active (fixes double start issue)
@@ -289,7 +327,6 @@ class ServerManager:
         if all_services or 'proxy' in services: self.start_proxy()
         if all_services or 'smm' in services: self.start_external("SMM", "example_smm_server.py")
         if all_services or 'friends' in services: self.start_external("Friends", "example_friend_server.py")
-        if all_services or 'smmdb' in services: self.start_cache_manager()
 
     def stop_services(self):
         self.running = False
@@ -490,6 +527,7 @@ class App(ctk.CTk):
                     continue
 
                 line = f"[{time.strftime('%H:%M:%S')}] {msg}\n"
+                
                 if tag in self.log_buffers:
                     self.log_buffers[tag].append(line)
                     if len(self.log_buffers[tag]) > 1000: self.log_buffers[tag].pop(0)
@@ -580,12 +618,16 @@ class App(ctk.CTk):
         def run_tests():
             self.manager.log("Debug", "[Debug] Attempting NEX friend service login...")
             # Pass the configured IP to the login script
-            self.manager.start_external("Debug", "example_friend_login.py", script_args=["-host", BIND_IP])
+            self.manager.start_external("NEX-Friends", "example_friend_login.py", script_args=["-host", BIND_IP])
             time.sleep(5)
             self.manager.log("Debug", "[Debug] Attempting NEX SMM service login...")
             # Pass the configured IP to the login script
-            self.manager.start_external("Debug", "example_smm_login.py", script_args=["-host", BIND_IP])
+            self.manager.start_external("NEX-SMM", "example_smm_login.py", script_args=["-host", BIND_IP])
             time.sleep(5)
+            
+            self.manager.log("Debug", "[Debug] Dumping all buffered logs to disk...")
+            sys.stdout.save_logs()
+            
             self.manager.log("Debug", "[Debug] Finished! Please send all the .log files if issues persist.")
             self.after(100, lambda: self.btn_debug.configure(state="normal"))
         threading.Thread(target=run_tests, daemon=True).start()
@@ -596,7 +638,8 @@ class App(ctk.CTk):
         sys.exit(0)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="SmmServer")
+    parser = argparse.ArgumentParser(description="SmmServer", add_help=False)
+    parser.add_argument('--help', action='help', help='show this help message and exit')
     parser.add_argument("--cli", nargs='+', help="Run specific services headless (e.g., --cli start, or --cli pretendo proxy)")
     parser.add_argument("--run-script", help="Internal use to run external scripts")
     
