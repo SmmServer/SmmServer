@@ -1,5 +1,3 @@
---- START OF FILE main.py ---
-
 import sys
 import os
 import subprocess
