@@ -1,5 +1,6 @@
 bin/
 obj/
+.vs/
 *.user
 /debug_log.txt
 /Configs/settings.ini
