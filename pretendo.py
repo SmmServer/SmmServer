@@ -229,13 +229,20 @@ class PretendoHandler(BaseHTTPRequestHandler):
                     found_path = ds_try_path
 
                 if not found_path:
+                    course_source = read_setting('General', 'coursesource', 'CourseWorld')
+                    
+                    if course_source == 'SMMDB':
+                        folders_order = ["smmdb", "courseworld"]
+                    else:
+                        folders_order = ["courseworld", "smmdb"]
+
                     bases_to_check = [
-                        os.path.join(www_save_dir, "smmdb"), 
-                        os.path.join(www_save_dir, "courseworld")
+                        os.path.join(www_save_dir, folders_order[0]), 
+                        os.path.join(www_save_dir, folders_order[1])
                     ]
                     if os.path.exists(CLIENTS_DIR):
-                        bases_to_check.append(os.path.join(CLIENTS_DIR, "www", "smmdb"))
-                        bases_to_check.append(os.path.join(CLIENTS_DIR, "www", "courseworld"))
+                        bases_to_check.append(os.path.join(CLIENTS_DIR, "www", folders_order[0]))
+                        bases_to_check.append(os.path.join(CLIENTS_DIR, "www", folders_order[1]))
 
                     for base in bases_to_check:
                         if not os.path.exists(base): continue
