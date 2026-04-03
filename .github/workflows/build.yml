@@ -57,6 +57,8 @@ jobs:
           $dest = "SmmServer/dist/SmmServer/Cemu"
           Invoke-WebRequest -Uri $url -OutFile $output
           Expand-Archive -Path $output -DestinationPath $dest -Force
+          Move-Item -Path "$dest/Cemu_2.6/*" -Destination $dest -Force
+          Remove-Item -Path "$dest/Cemu_2.6" -Recurse -Force
           Remove-Item $output
 
       - name: Upload Artifact
