@@ -1,0 +1,66 @@
+name: Build SmmServer
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          repository: SmmServer/SmmServer
+          submodules: recursive
+          path: SmmServer
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Download Datastore
+        shell: pwsh
+        run: |
+          $url = "https://mega.wldbs.workers.dev/download?url=aHR0cHM6Ly9tZWdhLm56L2ZpbGUvYkpsV25LcEojZkdOVUszM3VWNl9Yc0tCNUZfa0Y3X2lKUlpMUDRBRFpwUmJJWVdtODl5NA=="
+          $output = "datastore.zip"
+          Invoke-WebRequest -Uri $url -OutFile $output
+          # Extrai para SmmServer/NintendoClients/www
+          Expand-Archive -Path $output -DestinationPath "SmmServer/NintendoClients/www" -Force
+          Remove-Item $output
+
+      - name: Install dependencies
+        working-directory: SmmServer
+        run: uv sync
+
+      - name: Build
+        working-directory: SmmServer
+        run: uv run PyInstaller SmmServer.spec
+
+      - name: Copy FakeOnlineFiles
+        shell: pwsh
+        run: |
+          $dest = "SmmServer/dist/SmmServer/Cemu"
+          if (!(Test-Path $dest)) { New-Item -ItemType Directory -Force -Path $dest }
+          Copy-Item -Path "SmmServer/Cemu/*" -Destination $dest -Recurse -Force
+
+      - name: Download Cemu
+        shell: pwsh
+        run: |
+          $url = "https://github.com/cemu-project/Cemu/releases/download/v2.6/cemu-2.6-windows-x64.zip"
+          $output = "cemu.zip"
+          $dest = "SmmServer/dist/SmmServer/Cemu"
+          Invoke-WebRequest -Uri $url -OutFile $output
+          Expand-Archive -Path $output -DestinationPath $dest -Force
+          Remove-Item $output
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmmServer-Release
+          path: SmmServer/dist/SmmServer/
