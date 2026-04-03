@@ -30,7 +30,7 @@ jobs:
           $url = "https://mega.wldbs.workers.dev/download?url=aHR0cHM6Ly9tZWdhLm56L2ZpbGUvYkpsV25LcEojZkdOVUszM3VWNl9Yc0tCNUZfa0Y3X2lKUlpMUDRBRFpwUmJJWVdtODl5NA=="
           $output = "datastore.zip"
           Invoke-WebRequest -Uri $url -OutFile $output
-          # Extrai para SmmServer/NintendoClients/www
+          # Extract to SmmServer/NintendoClients/www
           Expand-Archive -Path $output -DestinationPath "SmmServer/NintendoClients/www" -Force
           Remove-Item $output
 
