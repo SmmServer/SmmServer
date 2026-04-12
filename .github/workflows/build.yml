@@ -7,62 +7,100 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CEMU_TAG: "v2.6"
+  CEMU_VERSION: "2.6"
+  CEMU_ZIP_SHA256: "a6bcc2bc42a362d10213819948f3152fae7d47f70067f25939b51d3ddcfb0896"
+
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
-          repository: SmmServer/SmmServer
           submodules: recursive
-          path: SmmServer
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v8
         with:
           enable-cache: true
 
-      - name: Download Datastore
+      - name: Prepare Datastore from FakeOnlineFiles
         shell: pwsh
         run: |
-          $url = "https://mega.wldbs.workers.dev/download?url=aHR0cHM6Ly9tZWdhLm56L2ZpbGUvYkpsV25LcEojZkdOVUszM3VWNl9Yc0tCNUZfa0Y3X2lKUlpMUDRBRFpwUmJJWVdtODl5NA=="
-          $output = "datastore.zip"
-          Invoke-WebRequest -Uri $url -OutFile $output
-          # Extract to SmmServer/NintendoClients/www
-          Expand-Archive -Path $output -DestinationPath "SmmServer/NintendoClients/www" -Force
-          Remove-Item $output
+          $source = "Cemu/datastore"
+          if (!(Test-Path $source)) {
+            throw "Expected datastore at $source"
+          }
+
+          $dest = "NintendoClients/www/datastore"
+          if (!(Test-Path $dest)) {
+            New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          }
+          else {
+            Get-ChildItem -Path $dest -Force | Remove-Item -Recurse -Force
+          }
+
+          Copy-Item -Path "$source/*" -Destination $dest -Recurse -Force
+
+          if (-not (Get-ChildItem -Path $dest -Force | Select-Object -First 1)) {
+            throw "Datastore copy completed, but NintendoClients/www/datastore is empty"
+          }
 
       - name: Install dependencies
-        working-directory: SmmServer
-        run: uv sync
+        run: uv sync --frozen
+
+      - name: Smoke test
+        run: uv run python -m py_compile main.py pretendo.py proxy.py
 
       - name: Build
-        working-directory: SmmServer
         run: uv run PyInstaller SmmServer.spec
 
       - name: Copy FakeOnlineFiles
         shell: pwsh
         run: |
-          $dest = "SmmServer/dist/SmmServer/Cemu"
+          $dest = "dist/SmmServer/Cemu"
           if (!(Test-Path $dest)) { New-Item -ItemType Directory -Force -Path $dest }
-          Copy-Item -Path "SmmServer/Cemu/*" -Destination $dest -Recurse -Force
+          Copy-Item -Path "Cemu/*" -Destination $dest -Recurse -Force
 
       - name: Download Cemu
         shell: pwsh
         run: |
-          $url = "https://github.com/cemu-project/Cemu/releases/download/v2.6/cemu-2.6-windows-x64.zip"
+          $url = "https://github.com/cemu-project/Cemu/releases/download/$env:CEMU_TAG/cemu-$env:CEMU_VERSION-windows-x64.zip"
           $output = "cemu.zip"
-          $dest = "SmmServer/dist/SmmServer/Cemu"
+          $dest = "dist/SmmServer/Cemu"
+          $expectedSha256 = "$env:CEMU_ZIP_SHA256"
+
           Invoke-WebRequest -Uri $url -OutFile $output
+
+          $actualSha256 = (Get-FileHash -Path $output -Algorithm SHA256).Hash.ToLower()
+          if ($actualSha256 -ne $expectedSha256) {
+            throw "cemu.zip checksum mismatch. Expected $expectedSha256 but got $actualSha256"
+          }
+
           Expand-Archive -Path $output -DestinationPath $dest -Force
-          Move-Item -Path "$dest/Cemu_2.6/*" -Destination $dest -Force
-          Remove-Item -Path "$dest/Cemu_2.6" -Recurse -Force
+          Move-Item -Path "$dest/Cemu_$env:CEMU_VERSION/*" -Destination $dest -Force
+          Remove-Item -Path "$dest/Cemu_$env:CEMU_VERSION" -Recurse -Force
           Remove-Item $output
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: SmmServer-Release
-          path: SmmServer/dist/SmmServer/
+          name: SmmServer-Release-${{ github.run_number }}
+          path: dist/SmmServer/
+          if-no-files-found: error

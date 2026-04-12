@@ -5,6 +5,7 @@ obj/
 /debug_log.txt
 /Configs/settings.ini
 /Configs/Pretendo++.ini
+/.venv/
 /venv/
 /requirements.txt
 
