@@ -20,6 +20,10 @@ a = Analysis(
     optimize=0
 )
 
+# Python 3.12+ only targets Windows 10+, so Windows API set DLLs are guaranteed
+# to exist on the target system and should not be bundled.
+a.binaries = [b for b in a.binaries if not b[0].lower().startswith('api-ms-win')]
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
