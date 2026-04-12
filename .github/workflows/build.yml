@@ -10,6 +10,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  PYTHONHASHSEED: "1"
+  SOURCE_DATE_EPOCH: "0"
   CEMU_TAG: "v2.6"
   CEMU_VERSION: "2.6"
   CEMU_ZIP_SHA256: "a6bcc2bc42a362d10213819948f3152fae7d47f70067f25939b51d3ddcfb0896"
@@ -17,7 +19,7 @@ env:
 jobs:
   build:
     if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) || github.event_name == 'workflow_dispatch' }}
-    runs-on: windows-2025
+    runs-on: windows-2022
     timeout-minutes: 20
 
     steps:
@@ -65,7 +67,18 @@ jobs:
         run: uv run python -m py_compile main.py pretendo.py proxy.py
 
       - name: Build
-        run: uv run PyInstaller SmmServer.spec
+        env:
+          PYTHONHASHSEED: "1"
+          SOURCE_DATE_EPOCH: "0"
+        run: uv run python build.py
+
+      - name: Make build deterministic
+        env:
+          PYTHONHASHSEED: "1"
+          SOURCE_DATE_EPOCH: "0"
+        run: |
+          uv run python fix_pe_headers.py dist/SmmServer/SmmServer.exe
+          uv run python fix_zip_timestamps.py dist/SmmServer/base_library.zip
 
       - name: Copy FakeOnlineFiles
         shell: pwsh

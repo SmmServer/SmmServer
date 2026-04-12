@@ -15,7 +15,7 @@ Install [`uv`](https://docs.astral.sh/uv/), then:
 uv sync
 
 # Create package
-uv run PyInstaller SmmServer.spec
+uv run python build.py
 ```
 
 The release package also has a copy of [Cemu 2.6](https://github.com/cemu-project/Cemu/releases/tag/v2.6) and a few configuration files.
