@@ -1,11 +1,6 @@
 name: Build SmmServer
 
-on:
-  push:
-    branches: [ "master", "main" ]
-  pull_request:
-    branches: [ "master", "main" ]
-  workflow_dispatch:
+on: [push, pull_request, workflow_dispatch]
 
 permissions:
   contents: read
@@ -21,6 +16,7 @@ env:
 
 jobs:
   build:
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) || github.event_name == 'workflow_dispatch' }}
     runs-on: windows-latest
     timeout-minutes: 20
 
