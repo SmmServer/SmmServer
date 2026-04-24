@@ -13,6 +13,7 @@ env:
   PYTHONHASHSEED: "1"
   SOURCE_DATE_EPOCH: "0"
   PYTHONUTF8: "1"
+  FLET_CLI_NO_RICH_OUTPUT: "1"
   CEMU_TAG: "v2.6"
   CEMU_VERSION: "2.6"
   CEMU_ZIP_SHA256: "a6bcc2bc42a362d10213819948f3152fae7d47f70067f25939b51d3ddcfb0896"
@@ -21,7 +22,7 @@ jobs:
   build:
     if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) || github.event_name == 'workflow_dispatch' }}
     runs-on: windows-2022
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
