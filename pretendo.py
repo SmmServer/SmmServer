@@ -9,6 +9,7 @@ import zipfile
 import email
 import requests
 import traceback
+import logging
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
@@ -28,8 +29,11 @@ else:
     APP_DIR = os.path.dirname(os.path.abspath(__file__))
     BASE_DIR = APP_DIR
 
+FLET_STORAGE = os.getenv("FLET_APP_STORAGE_DATA")
+STORAGE_DIR = os.getenv("SMM_STORAGE_DIR", FLET_STORAGE if FLET_STORAGE else APP_DIR)
+
 CLIENTS_DIR = os.path.join(BASE_DIR, "NintendoClients")
-CONFIGS_DIR = os.path.join(APP_DIR, "Configs")
+CONFIGS_DIR = os.path.join(STORAGE_DIR, "Configs")
 SETTINGS_INI_PATH = os.path.join(CONFIGS_DIR, "settings.ini")
 
 if not IS_FROZEN:
@@ -62,7 +66,7 @@ class ReusableHTTPServer(HTTPServer):
 
 class PretendoHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
-        print(f"[Pretendo] {self.command} {self.path} - {args[1]}", flush=True)
+        logging.info(f"[Pretendo] {self.command} {self.path} - {args[1]}")
 
     def do_HEAD(self): self.handle_request(method="HEAD")
     def do_GET(self): self.handle_request(method="GET")
@@ -126,7 +130,7 @@ class PretendoHandler(BaseHTTPRequestHandler):
                                     zf.writestr("course000/course_data_sub.cdt", c_sub if c_sub else b"")
                                     zf.writestr("course000/thumbnail1.tnl", c_thumb1 if c_thumb1 else b"")
                                 final_payload = zip_buffer.getvalue()
-                                print(f"[Pretendo] Prepared SMMDB upload package.", flush=True)
+                                logging.info(f"[Pretendo] Prepared SMMDB upload package.")
                         except: pass
 
                     if not final_payload and len(ash0_starts) > 0:
@@ -144,13 +148,13 @@ class PretendoHandler(BaseHTTPRequestHandler):
                         if api_key: headers['Authorization'] = f'APIKEY {api_key}'
 
                         requests.post("https://smmdb.net/api/uploadcourse", headers=headers, data=final_payload, timeout=60)
-                        print(f"[Pretendo] Course sent to SMMDB.", flush=True)
+                        logging.info(f"[Pretendo] Course sent to SMMDB.")
                         self.respond(200, "text/plain", b"OK", method)
                         return
 
                     self.respond(200, "text/plain", b"OK", method)
                 except Exception as e:
-                    print(f"[Pretendo] Upload error: {e}", flush=True)
+                    logging.info(f"[Pretendo] Upload error: {e}")
                     self.respond(500, "text/plain", b"Server Error", method)
                 return
 
@@ -201,7 +205,7 @@ class PretendoHandler(BaseHTTPRequestHandler):
                                 save_path = os.path.join(www_save_dir, filename)
                                 with open(save_path, "wb") as f:
                                     f.write(data)
-                                print(f"[Pretendo] Saved dump to {save_path}")
+                                logging.info(f"[Pretendo] Saved dump to {save_path}")
                                 self.respond(200, "text/plain", b"OK", method)
                                 return
                     self.respond(400, "text/plain", b"Bad Request", method)
@@ -260,14 +264,14 @@ class PretendoHandler(BaseHTTPRequestHandler):
                     except: self.respond(500, "text/plain", b"File Error", method)
                 else:
                     if "datastore" in parsed.path:
-                        print(f"[Pretendo] Datastore file not found: {parsed.path}", flush=True)
+                        logging.info(f"[Pretendo] Datastore file not found: {parsed.path}")
                         self.respond(404, "text/plain", b"Not Found", method)
                     else:
                         self.respond(404, "text/plain", b"Not Found", method)
                 return
 
             self.respond(404, "text/plain", b"Not Found", method)
-        except Exception as e: print(f"Error Request: {e}", flush=True)
+        except Exception as e: logging.error(f"Error Request: {e}")
 
     def respond(self, code, ctype, body, method):
         self.send_response(code)
@@ -283,10 +287,10 @@ def start_server():
     global server_instance
     try:
         server_instance = ReusableHTTPServer((BIND_IP, 8383), PretendoHandler)
-        print(f"[Pretendo] Server running on {BIND_IP}:8383", flush=True)
+        logging.error(f"[Pretendo] Server running on {BIND_IP}:8383")
         server_instance.serve_forever()
     except Exception as e:
-        print(f"[Pretendo] Crash: {e}", flush=True)
+        logging.error(f"[Pretendo] Crash: {e}")
 
 def stop_server():
     global server_instance

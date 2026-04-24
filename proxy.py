@@ -3,6 +3,7 @@ import os
 import ssl
 import socket
 import threading
+import logging
 import urllib.request
 import urllib.error
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -34,7 +35,7 @@ class ReusableHTTPServer(HTTPServer):
 
 class ProxyHandler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
-        print(f"[Proxy] {self.command} {self.path} - {args[1]}", flush=True)
+        logging.info(f"[Proxy] {self.command} {self.path} - {args[1]}")
     def do_GET(self): self.proxy()
     def do_POST(self): self.proxy()
     def proxy(self):
@@ -70,10 +71,10 @@ def start_server_instance(server_class, port, use_ssl=False, context=None):
             server.socket = context.wrap_socket(server.socket, server_side=True)
         servers.append(server)
         proto = "HTTPS" if use_ssl else "HTTP"
-        print(f"[Proxy] IPv4 {proto} listening on Port {port}", flush=True)
+        logging.info(f"[Proxy] IPv4 {proto} listening on Port {port}")
         server.serve_forever()
     except Exception as e:
-        print(f"[Proxy] Failed to bind {port}: {e}", flush=True)
+        logging.error(f"[Proxy] Failed to bind {port}: {e}")
 
 def start_proxy():
     cert_file = os.path.join(CERTS_DIR, "account.nintendo.net.crt")
@@ -85,9 +86,9 @@ def start_proxy():
             ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
             ctx.load_cert_chain(cert_file, key_file)
         else:
-            print(f"[Proxy] Certificates not found in {CERTS_DIR}", flush=True)
+            logging.error(f"[Proxy] Certificates not found in {CERTS_DIR}")
     except Exception as e:
-        print(f"[Proxy] SSL Error: {e}", flush=True)
+        logging.error(f"[Proxy] SSL Error: {e}")
 
     # Listen only on IPv4 Port 443 with SSL (No IPv6, No Port 80)
     t = threading.Thread(target=start_server_instance, args=(ReusableHTTPServer, 443, True, ctx), daemon=True)

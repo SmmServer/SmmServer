@@ -70,20 +70,20 @@ jobs:
         env:
           PYTHONHASHSEED: "1"
           SOURCE_DATE_EPOCH: "0"
-        run: uv run python build.py
+        run: uv run python build.py windows
 
       - name: Make build deterministic
         env:
           PYTHONHASHSEED: "1"
           SOURCE_DATE_EPOCH: "0"
         run: |
-          uv run python fix_pe_headers.py dist/SmmServer/SmmServer.exe
-          uv run python fix_zip_timestamps.py dist/SmmServer/_internal/base_library.zip
+          uv run python fix_pe_headers.py build/windows/SmmServer.exe
+          uv run python fix_zip_timestamps.py build/windows/_internal/base_library.zip
 
       - name: Copy FakeOnlineFiles
         shell: pwsh
         run: |
-          $dest = "dist/SmmServer/Cemu"
+          $dest = "build/windows/Cemu"
           if (!(Test-Path $dest)) { New-Item -ItemType Directory -Force -Path $dest }
           Copy-Item -Path "Cemu/*" -Destination $dest -Recurse -Force
 
@@ -92,7 +92,7 @@ jobs:
         run: |
           $url = "https://github.com/cemu-project/Cemu/releases/download/$env:CEMU_TAG/cemu-$env:CEMU_VERSION-windows-x64.zip"
           $output = "cemu.zip"
-          $dest = "dist/SmmServer/Cemu"
+          $dest = "build/windows/Cemu"
           $expectedSha256 = "$env:CEMU_ZIP_SHA256"
 
           Invoke-WebRequest -Uri $url -OutFile $output
@@ -111,5 +111,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: SmmServer-Release-${{ github.run_number }}
-          path: dist/SmmServer/
+          path: build/windows/
           if-no-files-found: error

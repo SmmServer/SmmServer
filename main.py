@@ -4,21 +4,15 @@ import subprocess
 import threading
 import queue
 import time
+import asyncio
 import configparser
 import argparse
-import pretendo
-import proxy
-import warnings
-import ctypes
-import tkinter
-from tkinter import messagebox
+import logging
+import shutil
+import flet as ft
+from typing import Dict, List
 
-try:
-    import customtkinter as ctk
-    GUI_AVAILABLE = True
-except ImportError:
-    GUI_AVAILABLE = False
-
+# Path Handling
 IS_FROZEN = getattr(sys, 'frozen', False)
 
 def resource_path(relative_path):
@@ -35,59 +29,87 @@ else:
     APP_DIR = os.path.dirname(os.path.abspath(__file__))
     BASE_DIR = APP_DIR
 
+# Flet Storage Handling (Official Way)
+FLET_STORAGE = os.getenv("FLET_APP_STORAGE_DATA")
+if FLET_STORAGE:
+    STORAGE_DIR = FLET_STORAGE
+    # Initialize storage if missing
+    for folder in ["Cemu", "Configs", os.path.join("NintendoClients", "www")]:
+        src = os.path.join(BASE_DIR, folder)
+        dst = os.path.join(STORAGE_DIR, folder)
+        if not os.path.exists(dst) and os.path.exists(src):
+            try:
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                if os.path.isdir(src):
+                    shutil.copytree(src, dst)
+                else:
+                    shutil.copy(src, dst)
+            except Exception as e:
+                print(f"Error initializing storage for {folder}: {e}")
+else:
+    STORAGE_DIR = APP_DIR
+
+os.environ["SMM_STORAGE_DIR"] = STORAGE_DIR
+
 CLIENTS_DIR = os.path.join(BASE_DIR, "NintendoClients")
-CONFIGS_DIR = os.path.join(APP_DIR, "Configs")
-SETTINGS_INI_PATH = os.path.join(CONFIGS_DIR, "settings.ini")
-LOG_FILE_PATH = os.path.join(APP_DIR, "Debug.log")
+sys.path.append(BASE_DIR)
 
-# Define individual log paths
-LOG_SMM_PATH = os.path.join(APP_DIR, "NEX SMM.log")
-LOG_FRIENDS_PATH = os.path.join(APP_DIR, "NEX Friends.log")
-LOG_PRETENDO_PATH = os.path.join(APP_DIR, "Pretendo.log")
-LOG_PROXY_PATH = os.path.join(APP_DIR, "Proxy.log")
-
-if not IS_FROZEN:
-    sys.path.append(CLIENTS_DIR)
-
+import pretendo
+import proxy
 try:
-    from NintendoClients import smmdb
+    from NintendoClients import example_smm_server, example_friend_server, smmdb
 except ImportError:
+    example_smm_server = None
+    example_friend_server = None
     smmdb = None
 
-warnings.filterwarnings("ignore")
+class CemuManager:
+    def __init__(self, base_dir):
+        self.cemu_dir = os.path.join(STORAGE_DIR, "Cemu")
+        if not os.path.exists(self.cemu_dir): os.makedirs(self.cemu_dir)
+        
+    def scan_versions(self):
+        versions = []
+        if not os.path.exists(self.cemu_dir): return versions
+        for item in os.listdir(self.cemu_dir):
+            full_path = os.path.join(self.cemu_dir, item)
+            if item.endswith(".AppImage") and os.path.isfile(full_path):
+                versions.append((item, full_path, "appimage"))
+            elif os.path.isdir(full_path):
+                exe_path = os.path.join(full_path, "Cemu.exe")
+                if os.path.exists(exe_path):
+                    versions.append((f"{item} (v)", exe_path, "exe"))
+            elif item == "Cemu.exe":
+                versions.append(("Cemu (Root)", full_path, "exe"))
+        return versions
 
-BIND_IP = pretendo.BIND_IP
-FONT_FAMILY = "Segoe UI" if os.name == "nt" else "Roboto"
+    def launch(self, version_info, log_callback):
+        name, path, vtype = version_info
+        log_callback("Debug", f"Launching {name}...")
+        try:
+            if sys.platform == 'win32':
+                subprocess.Popen([path], cwd=os.path.dirname(path), creationflags=0x08000000) # CREATE_NO_WINDOW
+            else:
+                subprocess.Popen([path], cwd=os.path.dirname(path))
+        except Exception as e:
+            log_callback("Debug", f"Failed to launch Cemu: {e}")
 
+# Constants (Material 3)
 M3_BG = "#141218"
 M3_SURFACE = "#1D1B20"
 M3_PRIMARY = "#D0BCFF"
 M3_ON_PRIMARY = "#381E72"
+M3_SECONDARY_CONTAINER = "#49454F"
+M3_ON_SECONDARY_CONTAINER = "#E8DEF8"
 M3_SURFACE_VARIANT = "#49454F"
 M3_CONSOLE_BG = "#1D1B20"
-M3_DROPDOWN_FG = "#2B2930"
 M3_WARNING = "#FFD54F"
+M3_ERROR = "#F2B8B5"
+M3_SUCCESS = "#B6F2B6"
 
-DEFAULT_INI_CONTENT = f"""[OAuth20]
-access_token=1234567890abcdef1234567890abcdef
-refresh_token=fedcba0987654321fedcba0987654321fedcba12
-expires_in=3600
-service_token=U0VSVklDRVNFUlZJQ0VTRVJWSUNFU0VSVklDRVNFUlZJQ0VTRVJWSUNFU0VSVklDRVNFUlZJQ0VTRVJWSUNFU0VSVklDRVNFUlZJQ0VTRVJWSUNFU0U=
-
-[00003200]
-host={BIND_IP}
-port=60000
-pid=1337
-password=password
-token=RlJJRU5EU0ZSSUVORFNGUklFTkRTRlJJRU5EU0ZSSUVORFNGUklFTkRTRlJJRU5EU0ZSSUVORFNGUklFTkRTRlJJRU5EU0ZSSUVORFNGUklFTkRTRlI=
-
-[1018DB00]
-host={BIND_IP}
-port=59900
-pid=1337
-password=password
-token=U01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU00=
-"""
+CONFIGS_DIR = os.path.join(STORAGE_DIR, "Configs")
+SETTINGS_INI_PATH = os.path.join(CONFIGS_DIR, "settings.ini")
+BIND_IP = pretendo.BIND_IP
 
 def read_setting(section, key, fallback):
     config = configparser.ConfigParser()
@@ -103,567 +125,467 @@ def write_setting(section, key, value):
     os.makedirs(CONFIGS_DIR, exist_ok=True)
     with open(SETTINGS_INI_PATH, 'w') as configfile: config.write(configfile)
 
-def setup_configs():
-    os.makedirs(CONFIGS_DIR, exist_ok=True)
-    os.makedirs(os.path.join(CLIENTS_DIR, "www"), exist_ok=True)
-    ini_path = os.path.join(CONFIGS_DIR, "Pretendo++.ini")
-    
-    if not os.path.exists(ini_path):
-        with open(ini_path, "w") as f: f.write(DEFAULT_INI_CONTENT)
-    else:
-        try:
-            config = configparser.ConfigParser()
-            config.read(ini_path)
-            updated = False
-            
-            if config.has_section('00003200'):
-                if config.get('00003200', 'host', fallback='') != BIND_IP:
-                    config.set('00003200', 'host', BIND_IP)
-                    updated = True
-            
-            if config.has_section('1018DB00'):
-                if config.get('1018DB00', 'host', fallback='') != BIND_IP:
-                    config.set('1018DB00', 'host', BIND_IP)
-                    updated = True
-            
-            if updated:
-                with open(ini_path, 'w') as f: config.write(f)
-        except Exception: pass
-
-    config = configparser.ConfigParser()
-    config.read(SETTINGS_INI_PATH)
-    if not config.has_section('General'):
-        config.add_section('General')
-        config.set('General', 'CourseSource', 'SMMDB')
-        with open(SETTINGS_INI_PATH, 'w') as f: config.write(f)
-
-def get_base_cmd():
-    return [sys.executable] if IS_FROZEN else [sys.executable, os.path.abspath(sys.argv[0])]
-
-class HybridLogger:
-    def __init__(self, log_queue=None, print_to_stdout=True):
-        self.terminal = sys.stdout
+class FletLogHandler(logging.Handler):
+    def __init__(self, log_queue):
+        super().__init__()
         self.log_queue = log_queue
-        self.print_to_stdout = print_to_stdout
-        self.lock = threading.Lock()
-        
-        self.master_buffer = []
-        self.pretendo_buffer = []
-        self.proxy_buffer = []
-        self.smm_buffer = []
-        self.friends_buffer = []
 
-    def write(self, message):
-        if '\x00' in message: return
-        if not message.strip(): return
-        
-        with self.lock:
-            # 1. Write to actual stdout (console) if needed
-            if self.print_to_stdout and self.terminal:
-                try:
-                    self.terminal.write(message + "\n")
-                    self.terminal.flush()
-                except: pass
-
-            # 2. Parse Tag from message "[Tag] Message"
-            clean = message.strip()
-            tag = "Debug"
-            content = clean
-            
-            if clean.startswith("[") and "]" in clean:
-                try:
-                    end_idx = clean.index("]")
-                    possible_tag = clean[1:end_idx]
-                    if possible_tag in ["Pretendo", "Proxy", "SMM", "Friends", "NEX-SMM", "NEX-Friends", "CacheStatus", "Debug"]:
-                        tag = possible_tag
-                        content = clean[end_idx+1:].strip()
-                except: pass
-
-            timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-            log_entry = f"[{timestamp}] {content}\n"
-
-            # 3. Routing Logic
-            gui_tag = "Debug" 
-
-            if tag == "Pretendo":
-                self.pretendo_buffer.append(log_entry)
-                gui_tag = "Pretendo"
-            
-            elif tag == "Proxy":
-                self.proxy_buffer.append(log_entry)
-                gui_tag = "Proxy"
-            
-            elif tag == "NEX-SMM":
-                self.smm_buffer.append(log_entry)
-                self.master_buffer.append(f"[{timestamp}] [SMM] {content}\n")
-                gui_tag = "Debug"
-            
-            elif tag == "SMM":
-                self.smm_buffer.append(log_entry)
-                self.master_buffer.append(f"[{timestamp}] [SMM] {content}\n")
-                gui_tag = "SMM"
-
-            elif tag == "NEX-Friends":
-                self.friends_buffer.append(log_entry)
-                self.master_buffer.append(f"[{timestamp}] [Friends] {content}\n")
-                gui_tag = "Debug"
-            
-            elif tag == "Friends":
-                self.friends_buffer.append(log_entry)
-                self.master_buffer.append(f"[{timestamp}] [Friends] {content}\n")
-                gui_tag = "Friends"
-
-            elif tag == "CacheStatus":
-                gui_tag = "CacheStatus"
-
-            else:
-                self.master_buffer.append(log_entry)
-                gui_tag = "Debug"
-            
-            # 4. Enviar para GUI (Queue)
-            if self.log_queue:
-                self.log_queue.put((gui_tag, content))
-
-    def flush(self):
-        with self.lock:
-            if self.terminal: self.terminal.flush()
-
-    def save_logs(self):
+    def emit(self, record):
         try:
-            with open(LOG_FILE_PATH, "w", encoding="utf-8") as f:
-                f.writelines(self.master_buffer)
+            msg = self.format(record)
+            tname = record.threadName
+            content = msg.lower()
+            tag = "Debug"
             
-            with open(LOG_PRETENDO_PATH, "w", encoding="utf-8") as f:
-                f.writelines(self.pretendo_buffer)
+            # 1. Route by Thread Name
+            if tname == 'SMM_Service': tag = "SMM"
+            elif tname == 'Friends_Service': tag = "Friends"
+            elif tname == 'Pretendo_Service': tag = "Pretendo"
+            elif tname == 'Proxy_Service': tag = "Proxy"
             
-            with open(LOG_PROXY_PATH, "w", encoding="utf-8") as f:
-                f.writelines(self.proxy_buffer)
+            # 2. Route by Content Tag
+            if "[smm]" in content or "[nex-smm]" in content: tag = "SMM"
+            elif "[friend]" in content or "[nex-friends]" in content: tag = "Friends"
+            elif "[pretendo]" in content: tag = "Pretendo"
+            elif "[proxy]" in content: tag = "Proxy"
+            elif "[cachestatus]" in content: tag = "CacheStatus"
+            
+            # 3. Route by Logger Name fallback
+            elif "smm" in record.name.lower(): tag = "SMM"
+            elif "friend" in record.name.lower(): tag = "Friends"
+            elif "pretendo" in record.name.lower(): tag = "Pretendo"
+            elif "proxy" in record.name.lower(): tag = "Proxy"
 
-            with open(LOG_SMM_PATH, "w", encoding="utf-8") as f:
-                f.writelines(self.smm_buffer)
-                
-            with open(LOG_FRIENDS_PATH, "w", encoding="utf-8") as f:
-                f.writelines(self.friends_buffer)
-                
-        except Exception as e:
-            print(f"Failed to save debug logs: {e}")
+            self.log_queue.put((tag, msg))
+        except Exception:
+            self.handleError(record)
 
 class ServerManager:
-    def __init__(self, log_queue=None):
-        self.log_queue = log_queue
+    def __init__(self):
         self.running = False
-        self.subprocesses = []
-        self.threads = []
-        self.cache_thread = None
-        setup_configs()
+        self.threads = {}
+        self.stop_events = {}
+        os.makedirs(CONFIGS_DIR, exist_ok=True)
+        os.makedirs(os.path.join(CLIENTS_DIR, "www"), exist_ok=True)
 
-    def log(self, tag, msg):
-        print(f"[{tag}] {msg}")
-
-    def start_cache_manager(self, progress_queue=None):
-        # Silent return if already active (fixes double start issue)
-        if self.cache_thread and self.cache_thread.is_alive():
-            return
-
-        def worker():
-            try:
-                if smmdb:
-                    self.log("Debug", "Starting Cache Manager...")
-                    smmdb.start_cache_worker(progress_queue, self.log_queue)
-                else:
-                    self.log("Debug", "SMMDB module not available.")
-            except Exception as e:
-                self.log("Debug", f"Cache error: {e}")
-        
-        self.cache_thread = threading.Thread(target=worker, daemon=True)
-        self.cache_thread.start()
-
-    def start_pretendo(self):
-        t = threading.Thread(target=lambda: pretendo.start_server(), daemon=True)
-        t.start()
-        self.threads.append(t)
-
-    def start_proxy(self):
-        t = threading.Thread(target=lambda: proxy.start_proxy(), daemon=True)
-        t.start()
-        self.threads.append(t)
-
-    def start_external(self, name, script, script_args=None):
-        script_path = os.path.join(CLIENTS_DIR, script)
-        cmd = get_base_cmd() + ["--run-script", script] if IS_FROZEN else [sys.executable, script_path]
-        
-        if script_args:
-            cmd.extend(script_args)
-        
-        def reader(proc):
-            if proc.stdout:
-                for line in proc.stdout:
-                    if line: self.log(name, line.strip())
-        
-        try:
-            flags = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
-            env = os.environ.copy()
-            env["PYTHONUNBUFFERED"] = "1"
-            env["PYTHONIOENCODING"] = "utf-8"
-            
-            proc = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
-                text=True, bufsize=1, cwd=CLIENTS_DIR, creationflags=flags, 
-                env=env, encoding='utf-8', errors='ignore'
-            )
-            self.subprocesses.append(proc)
-            threading.Thread(target=reader, args=(proc,), daemon=True).start()
-            self.log("Debug", f"{name} service started.")
-        except Exception as e:
-            self.log("Debug", f"Failed to start {name}: {e}")
-
-    def start_services(self, services=['start']):
+    def start_services(self):
         self.running = True
-        all_services = 'start' in services
+        self.stop_events = {k: threading.Event() for k in ['smm', 'friends']}
         
-        if all_services or 'pretendo' in services: self.start_pretendo()
-        if all_services or 'proxy' in services: self.start_proxy()
-        if all_services or 'smm' in services: self.start_external("SMM", "example_smm_server.py")
-        if all_services or 'friends' in services: self.start_external("Friends", "example_friend_server.py")
+        self.threads['pretendo'] = threading.Thread(target=pretendo.start_server, name='Pretendo_Service', daemon=True)
+        self.threads['pretendo'].start()
+        
+        self.threads['proxy'] = threading.Thread(target=proxy.start_proxy, name='Proxy_Service', daemon=True)
+        self.threads['proxy'].start()
+        
+        if example_smm_server:
+            self.threads['smm'] = threading.Thread(
+                target=lambda: example_smm_server.start_server(BIND_IP, self.stop_events['smm']), 
+                name='SMM_Service', daemon=True
+            )
+            self.threads['smm'].start()
+            
+        if example_friend_server:
+            self.threads['friends'] = threading.Thread(
+                target=lambda: example_friend_server.start_server(BIND_IP, self.stop_events['friends']), 
+                name='Friends_Service', daemon=True
+            )
+            self.threads['friends'].start()
 
     def stop_services(self):
         self.running = False
         pretendo.stop_server()
         proxy.stop_proxy()
-        for p in self.subprocesses:
-            try: p.terminate()
-            except: pass
-        self.subprocesses = []
+        if example_smm_server: example_smm_server.stop_server()
+        if example_friend_server: example_friend_server.stop_server()
+        for e in self.stop_events.values(): e.set()
+        self.threads.clear()
 
-def run_cli(services):
-    print(f"Starting SmmServer CLI Mode: {services}")
-    manager = ServerManager()
-    manager.start_services(services)
-    try:
-        while True: time.sleep(1)
-    except KeyboardInterrupt:
-        print("\nStopping...")
-        manager.stop_services()
-
-class CemuManager:
-    def __init__(self, base_dir):
-        self.cemu_dir = os.path.join(base_dir, "Cemu")
-        if not os.path.exists(self.cemu_dir): os.makedirs(self.cemu_dir)
-    def scan_versions(self):
-        versions = []
-        if not os.path.exists(self.cemu_dir): return versions
-        for item in os.listdir(self.cemu_dir):
-            full_path = os.path.join(self.cemu_dir, item)
-            if item.endswith(".AppImage") and os.path.isfile(full_path): versions.append((item, full_path, "appimage"))
-            elif os.path.isdir(full_path):
-                exe_path = os.path.join(full_path, "Cemu.exe")
-                if os.path.exists(exe_path): versions.append((f"{item} (v)", exe_path, "exe"))
-            elif item == "Cemu.exe": versions.append(("Cemu (Root)", full_path, "exe"))
-        return versions
-    def launch(self, version_info, log_callback):
-        name, path, vtype = version_info
-        log_callback("Debug", f"Launching {name}...")
+    def start_external(self, name, script, log_queue, script_args=None):
+        script_path = os.path.join(CLIENTS_DIR, script)
+        cmd = [sys.executable, script_path]
+        if script_args: cmd.extend(script_args)
+        
+        def reader(proc):
+            for line in proc.stdout:
+                if line: log_queue.put((name, line.strip()))
+        
         try:
-            if sys.platform == 'win32': subprocess.Popen([path], cwd=os.path.dirname(path), creationflags=subprocess.CREATE_NO_WINDOW)
-            else: subprocess.Popen([path], cwd=os.path.dirname(path))
-        except Exception as e: log_callback("Debug", f"Failed to launch Cemu: {e}")
+            flags = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
+            proc = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
+                text=True, bufsize=1, cwd=CLIENTS_DIR, creationflags=flags,
+                env={**os.environ, "PYTHONUNBUFFERED": "1"}
+            )
+            threading.Thread(target=reader, args=(proc,), daemon=True).start()
+            return proc
+        except Exception as e:
+            log_queue.put(("Debug", f"Failed to start {name}: {e}"))
+            return None
 
-class App(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        self.title("SmmServer")
-        self.geometry("1000x750")
-        self.minsize(1000, 750)
-        self.configure(fg_color=M3_BG)
-        ctk.set_appearance_mode("Dark")
-        
-        try: self.iconbitmap(resource_path("mushroom.ico"))
-        except: pass
+async def main(page: ft.Page):
+    page.title = "SmmServer"
+    page.theme_mode = ft.ThemeMode.DARK
+    page.bgcolor = M3_BG
+    page.padding = 0
+    page.window_width = 1000
+    page.window_height = 750
 
-        self.log_queue = queue.Queue()
-        sys.stdout = HybridLogger(self.log_queue, print_to_stdout=False)
-        sys.stderr = sys.stdout
+    log_queue = queue.Queue()
+    progress_queue = queue.Queue()
 
-        self.progress_queue = queue.Queue()
-        self.manager = ServerManager(self.log_queue)
-        self.cemu_mgr = CemuManager(APP_DIR)
+    # Logging Cleanup
+    for h in logging.getLogger().handlers[:]: logging.getLogger().removeHandler(h)
+    
+    handler = FletLogHandler(log_queue)
+    handler.setFormatter(logging.Formatter("[%(asctime)s] %(message)s", datefmt="%H:%M:%S"))
+    logging.getLogger().addHandler(handler)
+    logging.getLogger().setLevel(logging.INFO)
 
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=1)
-        self.setup_sidebar()
-        self.setup_main_content()
-        
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
-        self.after(100, self.update_logs)
-        self.after(100, self.update_progress)
-        self.after(1500, lambda: self.manager.start_cache_manager(self.progress_queue))
+    manager = ServerManager()
 
-    def setup_sidebar(self):
-        self.sidebar_frame = ctk.CTkFrame(self, width=220, corner_radius=0, fg_color=M3_SURFACE)
-        self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
-        
-        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="SmmServer", font=ctk.CTkFont(family=FONT_FAMILY, size=24, weight="bold"), text_color="#E6E1E5")
-        self.logo_label.pack(pady=(30, 20), padx=20, anchor="w")
-        
-        self.btn_server = ctk.CTkButton(self.sidebar_frame, text="Start Server", command=self.toggle_server, fg_color=M3_PRIMARY, text_color=M3_ON_PRIMARY, hover_color="#E8DEF8", corner_radius=24, height=48, font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"))
-        self.btn_server.pack(padx=20, pady=10, fill="x")
-        
-        self.progress_label = ctk.CTkLabel(self.sidebar_frame, text="Cache Status: Idle", text_color="#CAC4D0", font=(FONT_FAMILY, 12))
-        self.progress_label.pack(padx=20, pady=(10, 2), anchor="w")
-        
-        self.progress_bar = ctk.CTkProgressBar(self.sidebar_frame, progress_color=M3_PRIMARY)
-        self.progress_bar.set(0)
-        self.progress_bar.pack(padx=20, pady=(0, 10), fill="x")
-        
-        ctk.CTkLabel(self.sidebar_frame, text="Emulator Config", text_color="#CAC4D0", font=(FONT_FAMILY, 12)).pack(padx=20, pady=(15,5), anchor="w")
-        
-        self.cemu_vers = self.cemu_mgr.scan_versions()
-        self.cemu_values = [v[0] for v in self.cemu_vers] if self.cemu_vers else ["No Cemu found"]
-        self.combo_cemu = ctk.CTkComboBox(self.sidebar_frame, values=self.cemu_values, fg_color=M3_DROPDOWN_FG, border_width=0, button_color=M3_SURFACE_VARIANT, dropdown_fg_color=M3_SURFACE, dropdown_text_color="#E6E1E5", text_color="#E6E1E5", corner_radius=15, height=32, font=ctk.CTkFont(family=FONT_FAMILY, size=13))
-        self.combo_cemu.pack(padx=20, pady=(0, 10), fill="x")
-        if self.cemu_values: self.combo_cemu.set(self.cemu_values[0])
-        
-        self.btn_cemu = ctk.CTkButton(self.sidebar_frame, text="Launch Cemu", command=self.launch_cemu, fg_color="transparent", border_width=1, border_color=M3_SURFACE_VARIANT, text_color=M3_PRIMARY, hover_color=M3_SURFACE_VARIANT, corner_radius=20, height=40, font=ctk.CTkFont(family=FONT_FAMILY, size=13))
-        self.btn_cemu.pack(padx=20, pady=0, fill="x")
-        
-        ctk.CTkFrame(self.sidebar_frame, height=1, fg_color=M3_SURFACE_VARIANT).pack(fill="x", padx=20, pady=(20, 10))
-        
-        self.tabs_container = ctk.CTkFrame(self.sidebar_frame, fg_color="transparent")
-        self.tabs_container.pack(fill="x", padx=10, pady=0)
-        self.tabs = ["SMM", "Friends", "Pretendo", "Proxy", "Debug"]
-        self.current_tab = "SMM"
-        self.log_buffers = {k: [] for k in self.tabs}
-        self.tab_buttons = {}
-        for tab in self.tabs:
-            btn = ctk.CTkButton(self.tabs_container, text=f"  {tab}", command=lambda t=tab: self.switch_tab(t), fg_color=M3_SURFACE_VARIANT if tab == "SMM" else "transparent", text_color="#E6E1E5", hover_color=M3_SURFACE_VARIANT, anchor="w", corner_radius=24, height=48, font=ctk.CTkFont(family=FONT_FAMILY, size=14, weight="bold"))
-            btn.pack(fill="x", pady=2)
-            self.tab_buttons[tab] = btn
+    # Cemu Logic
+    cemu_mgr = CemuManager(APP_DIR)
+    cemu_vers = cemu_mgr.scan_versions()
+    cemu_options = [ft.dropdown.Option(v[0]) for v in cemu_vers] if cemu_vers else [ft.dropdown.Option("No Cemu found")]
+    
+    def on_launch_cemu(e):
+        if cemu_vers:
+            selection = combo_cemu.value
+            for name, path, vtype in cemu_vers:
+                if name == selection:
+                    cemu_mgr.launch((name, path, vtype), logging.info)
+                    break
 
-        self.spacer = ctk.CTkLabel(self.sidebar_frame, text="")
-        self.spacer.pack(expand=True, fill="both")
-        
-        self.btn_debug = ctk.CTkButton(self.sidebar_frame, text="🐞 Debug Services", command=self.run_debug_tests, fg_color="transparent", text_color="#CAC4D0", hover_color=M3_SURFACE_VARIANT, anchor="w", height=40, font=ctk.CTkFont(family=FONT_FAMILY, size=13))
-        self.btn_debug.pack(fill="x", padx=10, pady=(0, 5), side="bottom")
-        
-        self.btn_settings = ctk.CTkButton(self.sidebar_frame, text="⚙️ Settings", command=self.open_settings_window, fg_color="transparent", text_color="#CAC4D0", hover_color=M3_SURFACE_VARIANT, anchor="w", height=40, font=ctk.CTkFont(family=FONT_FAMILY, size=13))
-        self.btn_settings.pack(fill="x", padx=10, pady=(0, 10), side="bottom")
+    combo_cemu = ft.Dropdown(
+        options=cemu_options,
+        value=cemu_options[0].key if cemu_options else None,
+        height=40,
+        text_size=13,
+        bgcolor=M3_SURFACE,
+        border_color=M3_SURFACE_VARIANT,
+        border_radius=15,
+        content_padding=ft.Padding.symmetric(horizontal=12, vertical=0),
+        expand=True
+    )
 
-    def setup_main_content(self):
-        self.main_frame = ctk.CTkFrame(self, corner_radius=24, fg_color=M3_BG)
-        self.main_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
-        self.main_frame.grid_rowconfigure(1, weight=1)
-        self.main_frame.grid_columnconfigure(0, weight=1)
-        
-        self.header_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.header_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=(20, 10))
-        self.lbl_title = ctk.CTkLabel(self.header_frame, text="Console Output: SMM", font=ctk.CTkFont(family=FONT_FAMILY, size=20, weight="bold"), text_color="#E6E1E5")
-        self.lbl_title.pack(side="left")
-        
-        self.status_container = ctk.CTkFrame(self.header_frame, fg_color="#3c2e2e", corner_radius=12)
-        self.status_container.pack(side="right")
-        self.status_dot = ctk.CTkLabel(self.status_container, text="●", font=("Arial", 16), text_color="#FFB4AB")
-        self.status_dot.pack(side="left", padx=(10, 5), pady=5)
-        self.status_lbl = ctk.CTkLabel(self.status_container, text="Stopped", font=(FONT_FAMILY, 12, "bold"), text_color="#FFB4AB")
-        self.status_lbl.pack(side="left", padx=(0, 10), pady=5)
-        
-        self.console_card = ctk.CTkFrame(self.main_frame, fg_color=M3_CONSOLE_BG, corner_radius=16)
-        self.console_card.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 20))
-        self.console_card.grid_rowconfigure(0, weight=1)
-        self.console_card.grid_columnconfigure(0, weight=1)
-        
-        self.console = ctk.CTkTextbox(self.console_card, font=("Consolas", 13), fg_color="transparent", text_color="#C4C7C5", wrap="none", activate_scrollbars=True)
-        self.console.grid(row=0, column=0, sticky="nsew", padx=10, pady=(10, 5))
-        self.console.configure(state="disabled")
-        
-        self.cache_status_lbl = ctk.CTkLabel(self.console_card, text="> Status: Waiting for service...", anchor="w", font=("Consolas", 12), text_color="#9E9E9E")
-        self.cache_status_lbl.grid(row=2, column=0, sticky="ew", padx=15, pady=(0, 10))
+    # UI State
+    current_tab = "SMM"
+    log_buffers = {k: [] for k in ["SMM", "Friends", "Pretendo", "Proxy", "Debug"]}
 
-    def toggle_server(self):
-        if not self.manager.running:
-            self.manager.start_services(['start'])
-            self.update_ui_running()
+    # UI Components - Common
+    status_dot = ft.Text("●", color=M3_ERROR, size=14)
+    status_msg = ft.Text("Stopped", color=M3_ERROR, size=12, weight="bold")
+    status_indicator = ft.Container(
+        content=ft.Row([status_dot, status_msg], spacing=4, alignment=ft.MainAxisAlignment.CENTER),
+        width=100, height=32, bgcolor="#3c2e2e", border_radius=16,
+    )
+
+    cache_status_text = ft.Text("> Status: Ready", size=12, color="#9E9E9E", italic=True)
+    progress_bar = ft.ProgressBar(value=0, color=M3_PRIMARY, bgcolor="#49454F", height=3)
+    progress_label = ft.Text("Cache Status: Idle", size=12, color="#CAC4D0")
+
+    console_text = ft.Text(value="", font_family="Consolas", size=13, color="#C4C7C5", selectable=True)
+    console_container = ft.Column([console_text], scroll=ft.ScrollMode.ALWAYS, expand=True, spacing=0)
+
+    # UI Components - Base
+    btn_server = ft.FilledButton(
+        "Start Server",
+        style=ft.ButtonStyle(
+            bgcolor=M3_PRIMARY, color=M3_ON_PRIMARY, shape=ft.RoundedRectangleBorder(radius=20),
+            padding=ft.Padding.symmetric(horizontal=16, vertical=12)
+        ),
+        expand=True
+    )
+
+    async def update_ui_status():
+        if manager.running:
+            btn_server.text = "Stop Server"
+            btn_server.style = ft.ButtonStyle(bgcolor="#93000A", color="#FFDAD6", shape=ft.RoundedRectangleBorder(radius=20))
+            status_indicator.bgcolor = "#2e3c2e"
+            status_dot.color = M3_SUCCESS
+            status_msg.value = "Running"
+            status_msg.color = M3_SUCCESS
         else:
-            self.manager.stop_services()
-            self.update_ui_stopped()
+            btn_server.text = "Start Server"
+            btn_server.style = ft.ButtonStyle(bgcolor=M3_PRIMARY, color=M3_ON_PRIMARY, shape=ft.RoundedRectangleBorder(radius=20))
+            status_indicator.bgcolor = "#3c2e2e"
+            status_dot.color = M3_ERROR
+            status_msg.value = "Stopped"
+            status_msg.color = M3_ERROR
+        page.update()
 
-    def update_ui_running(self):
-        self.btn_server.configure(text="Stop Server", fg_color="#93000A", text_color="#FFDAD6", hover_color="#BA1A1A")
-        self.status_container.configure(fg_color="#2e3c2e")
-        self.status_dot.configure(text_color="#b6f2b6")
-        self.status_lbl.configure(text="Running", text_color="#b6f2b6")
+    async def on_server_click(e):
+        if not manager.running: manager.start_services()
+        else: manager.stop_services()
+        await update_ui_status()
 
-    def update_ui_stopped(self):
-        self.btn_server.configure(text="Start Server", fg_color=M3_PRIMARY, text_color=M3_ON_PRIMARY, hover_color="#E8DEF8")
-        self.status_container.configure(fg_color="#3c2e2e")
-        self.status_dot.configure(text_color="#FFB4AB")
-        self.status_lbl.configure(text="Stopped", text_color="#FFB4AB")
+    # Settings Logic
+    async def open_settings(e):
+        source_var = ft.Ref[ft.RadioGroup]()
+        apikey_var = ft.Ref[ft.TextField]()
 
-    def launch_cemu(self):
-        if self.cemu_vers:
-            idx = self.cemu_values.index(self.combo_cemu.get())
-            self.cemu_mgr.launch(self.cemu_vers[idx], self.manager.log)
+        async def save_settings(e):
+            write_setting('General', 'CourseSource', source_var.current.value)
+            write_setting('General', 'SmmdbApiKey', apikey_var.current.value)
+            dialog.open = False
+            page.update()
+            logging.info(f"Settings saved: Source={source_var.current.value}")
 
-    def switch_tab(self, tab):
-        self.current_tab = tab
-        self.lbl_title.configure(text=f"Console Output: {tab}")
-        for t, btn in self.tab_buttons.items():
-            if t == tab: btn.configure(fg_color=M3_SURFACE_VARIANT)
-            else: btn.configure(fg_color="transparent")
-        self.console.configure(state="normal")
-        self.console.delete("0.0", "end")
-        self.console.insert("0.0", "".join(self.log_buffers.get(tab, [])))
-        self.console.see("end")
-        self.console.configure(state="disabled")
+        async def cancel_settings(e):
+            dialog.open = False
+            page.update()
 
-    def update_logs(self):
-        while not self.log_queue.empty():
-            try:
-                tag, msg = self.log_queue.get_nowait()
-                
-                if tag == "CacheStatus":
-                    self.cache_status_lbl.configure(text=f"> {msg}")
-                    continue
+        dialog = ft.AlertDialog(
+            title=ft.Text("Settings"),
+            content=ft.Column([
+                ft.Text("Course Source", weight="bold"),
+                ft.RadioGroup(
+                    ref=source_var,
+                    content=ft.Column([
+                        ft.Radio(value="CourseWorld", label="Nintendo Course World"),
+                        ft.Radio(value="SMMDB", label="SMMDB"),
+                    ]),
+                    value=read_setting('General', 'CourseSource', 'SMMDB')
+                ),
+                ft.Divider(),
+                ft.Text("SMMDB API Key", weight="bold"),
+                ft.TextField(
+                    ref=apikey_var,
+                    value=read_setting('General', 'SmmdbApiKey', ''),
+                    password=True, can_reveal_password=True,
+                    bgcolor=M3_SURFACE_VARIANT, border_radius=10
+                ),
+                ft.Divider(),
+                ft.Text("Application Data", weight="bold"),
+                ft.Text("Files are saved in:", size=11, color="#CAC4D0"),
+                ft.Container(
+                    content=ft.Text(STORAGE_DIR, size=11, color=M3_PRIMARY, selectable=True),
+                    bgcolor="#2D2933", padding=8, border_radius=5
+                ),
+            ], tight=True, spacing=10),
+            actions=[
+                ft.TextButton("Save", on_click=save_settings),
+                ft.TextButton("Cancel", on_click=cancel_settings),
+            ]
+        )
+        page.overlay.append(dialog)
+        dialog.open = True
+        page.update()
+    
+    # Debug Logic
 
-                line = f"[{time.strftime('%H:%M:%S')}] {msg}\n"
-                
-                if tag in self.log_buffers:
-                    self.log_buffers[tag].append(line)
-                    if len(self.log_buffers[tag]) > 1000: self.log_buffers[tag].pop(0)
-                
-                if tag == self.current_tab:
-                    self.console.configure(state="normal")
-                    self.console.insert("end", line)
-                    self.console.see("end")
-                    self.console.configure(state="disabled")
-            except: break
-        self.after(100, self.update_logs)
+    debug_progress_bar = ft.ProgressBar(value=0, color=M3_PRIMARY, visible=False)
 
-    def update_progress(self):
-        while not self.progress_queue.empty():
-            try:
-                # Direct event unpacking (Telekinesis)
-                event_type, data = self.progress_queue.get_nowait()
-                
-                if event_type == "BOOT_START":
-                    self.btn_server.configure(state="disabled")
-                    self.progress_bar.configure(progress_color=M3_PRIMARY)
-                    self.progress_label.configure(text="Bootstrapping Cache...")
-                    self.progress_bar.set(0)
-                
-                elif event_type == "BOOT_END":
-                    self.btn_server.configure(state="normal")
-                    self.progress_bar.set(1.0)
-                    # Idle State: Gray bar (#49454F)
-                    self.progress_bar.configure(progress_color="#49454F")
-                    self.progress_label.configure(text="Cache Status: Idle")
-                
-                elif event_type == "PROGRESS":
-                    msg, val, total = data
-                    # Ensure purple if moving
-                    self.progress_bar.configure(progress_color=M3_PRIMARY)
-                    self.progress_label.configure(text=f"{msg} ({val}/{total})")
-                    if total > 0:
-                        self.progress_bar.set(val/total)
-                        
-            except: break
-        self.after(100, self.update_progress)
-
-    def on_setting_change(self):
-        write_setting('General', 'CourseSource', self.source_var.get())
-        self.manager.log("Debug", f"Settings updated: Source={self.source_var.get()}")
-
-    def open_settings_window(self):
-        window = ctk.CTkToplevel(self)
-        window.title("Settings")
-        window.geometry("500x500") 
-        window.resizable(False, False)
-        window.configure(fg_color=M3_BG)
-        window.transient(self)
-        window.wait_visibility()
-        window.grab_set()
-
-        ctk.CTkLabel(window, text="Settings", font=(FONT_FAMILY, 20, "bold"), text_color="#E6E1E5").pack(pady=20)
-
-        source_frame = ctk.CTkFrame(window, fg_color=M3_SURFACE, corner_radius=12)
-        source_frame.pack(padx=20, pady=10, fill="x")
-        ctk.CTkLabel(source_frame, text="Course Source", font=(FONT_FAMILY, 14, "bold"), text_color="#E6E1E5").pack(pady=(15, 5))
-        self.source_var = ctk.StringVar(value=read_setting('General', 'CourseSource', 'SMMDB'))
-        ctk.CTkRadioButton(source_frame, text="Nintendo Course World", variable=self.source_var, value="CourseWorld", command=self.on_setting_change).pack(anchor="w", padx=20, pady=5)
-        ctk.CTkRadioButton(source_frame, text="SMMDB", variable=self.source_var, value="SMMDB", command=self.on_setting_change).pack(anchor="w", padx=20, pady=(5, 15))
-
-        apikey_frame = ctk.CTkFrame(window, fg_color=M3_SURFACE, corner_radius=12)
-        apikey_frame.pack(padx=20, pady=10, fill="x")
-        ctk.CTkLabel(apikey_frame, text="SMMDB API Key", font=(FONT_FAMILY, 14, "bold"), text_color="#E6E1E5").pack(pady=(15, 5))
-        self.apikey_var = ctk.StringVar(value=read_setting('General', 'SmmdbApiKey', ''))
-        entry = ctk.CTkEntry(apikey_frame, textvariable=self.apikey_var, show="*")
-        entry.pack(fill="x", padx=20, pady=5)
-
-        def save_apikey():
-            write_setting('General', 'SmmdbApiKey', self.apikey_var.get())
-            messagebox.showinfo("Success", "API Key Saved")
-
-        ctk.CTkButton(apikey_frame, text="Save Key", command=save_apikey, height=32, corner_radius=16).pack(pady=10, padx=20)
-
-        ctk.CTkButton(window, text="Close", command=window.destroy, fg_color="transparent", border_width=1, border_color=M3_SURFACE_VARIANT).pack(pady=10)
-
-    def run_debug_tests(self):
-        if not self.manager.running:
-            messagebox.showwarning("Server Offline", "The server must be running to perform debug tests.")
+    async def run_debug_tests(e):
+        if not manager.running:
+            page.snack_bar = ft.SnackBar(ft.Text("Start the server first!"))
+            page.snack_bar.open = True
+            page.update()
             return
-        self.btn_debug.configure(state="disabled")
-        self.switch_tab("Debug")
-        self.manager.log("Debug", "[Debug] Starting full service test...")
-        def run_tests():
-            self.manager.log("Debug", "[Debug] Attempting NEX friend service login...")
-            # Pass the configured IP to the login script
-            self.manager.start_external("NEX-Friends", "example_friend_login.py", script_args=["-host", BIND_IP])
-            time.sleep(5)
-            self.manager.log("Debug", "[Debug] Attempting NEX SMM service login...")
-            # Pass the configured IP to the login script
-            self.manager.start_external("NEX-SMM", "example_smm_login.py", script_args=["-host", BIND_IP])
-            time.sleep(5)
-            
-            self.manager.log("Debug", "[Debug] Dumping all buffered logs to disk...")
-            sys.stdout.save_logs()
-            
-            self.manager.log("Debug", "[Debug] Finished! Please send all the .log files if issues persist.")
-            self.after(100, lambda: self.btn_debug.configure(state="normal"))
-        threading.Thread(target=run_tests, daemon=True).start()
+        
+        await switch_tab("Debug")
+        debug_progress_bar.visible = True
+        debug_progress_bar.value = 0.1
+        page.update()
+        
+        logging.getLogger().info("[Debug] Starting Friend Service test...")
+        manager.start_external("Friends", "example_friend_login.py", log_queue, ["-host", BIND_IP])
+        await asyncio.sleep(4)
+        
+        debug_progress_bar.value = 0.5
+        page.update()
+        logging.getLogger().info("[Debug] Starting SMM Service test...")
+        manager.start_external("SMM", "example_smm_login.py", log_queue, ["-host", BIND_IP])
+        await asyncio.sleep(4)
+        
+        debug_progress_bar.value = 1.0
+        page.update()
+        logging.getLogger().info("[Debug] Diagnostic Finished.")
+        await asyncio.sleep(2)
+        debug_progress_bar.visible = False
+        page.update()
+    
+    btn_server.on_click = on_server_click
 
-    def on_close(self):
-        self.manager.stop_services()
-        self.destroy()
-        sys.exit(0)
+    async def switch_tab(tab):
+        nonlocal current_tab
+        current_tab = tab
+        for t, btns in tab_buttons.items():
+            for btn in btns:
+                btn.bgcolor = M3_SECONDARY_CONTAINER if t == tab else ft.Colors.TRANSPARENT
+                btn.content.color = M3_ON_SECONDARY_CONTAINER if t == tab else "#E6E1E5"
+        console_text.value = "".join(log_buffers[tab])
+        header_title.value = f"Console Output: {tab}"
+        page.update()
+
+    tab_buttons = {k: [] for k in ["SMM", "Friends", "Pretendo", "Proxy", "Debug"]}
+
+    def create_sidebar_content():
+        # Re-create tabs column for each instance
+        local_tabs = ft.Column(spacing=1)
+        for t in ["SMM", "Friends", "Pretendo", "Proxy", "Debug"]:
+            btn = ft.Container(
+                content=ft.Text(f" {t}", size=12, weight="bold", color="#E6E1E5"),
+                on_click=lambda e, tab=t: page.run_task(switch_tab, tab),
+                bgcolor=M3_SECONDARY_CONTAINER if t == current_tab else ft.Colors.TRANSPARENT,
+                border_radius=18, height=36, alignment=ft.Alignment(-1, 0), padding=ft.Padding.symmetric(horizontal=12)
+            )
+            tab_buttons[t].append(btn) 
+            local_tabs.controls.append(btn)
+
+        return ft.Column([
+            ft.Text("SmmServer", size=22, weight="bold", color="#E6E1E5"),
+            ft.Container(height=4),
+            ft.Row([btn_server]),
+            ft.Container(height=4),
+            progress_label,
+            progress_bar,
+            ft.Container(height=10),
+            ft.Text("Emulator Config", size=11, color="#CAC4D0"),
+            ft.Row([combo_cemu]),
+            ft.Container(height=2),
+            ft.OutlinedButton(
+                "Launch Cemu", on_click=on_launch_cemu,
+                style=ft.ButtonStyle(
+                    color=M3_PRIMARY, side=ft.BorderSide(1, M3_SURFACE_VARIANT),
+                    shape=ft.RoundedRectangleBorder(radius=15),
+                ),
+                height=36
+            ),
+            ft.Divider(height=1, color=M3_SURFACE_VARIANT),
+            ft.Text("Logs", size=11, weight="bold", color="#CAC4D0"),
+            local_tabs,
+            ft.Container(expand=True),
+            ft.TextButton(
+                content=ft.Row([ft.Icon(ft.Icons.BUG_REPORT, color="#CAC4D0", size=16), ft.Text("Debug Services", color="#CAC4D0", size=12)], spacing=10),
+                on_click=run_debug_tests,
+                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8), padding=ft.Padding.symmetric(horizontal=8))
+            ),
+            ft.TextButton(
+                content=ft.Row([ft.Icon(ft.Icons.SETTINGS, color="#CAC4D0", size=16), ft.Text("Settings", color="#CAC4D0", size=12)], spacing=10),
+                on_click=open_settings,
+                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8), padding=ft.Padding.symmetric(horizontal=8))
+            ),
+        ], expand=True)
+
+    sidebar = ft.Container(
+        content=create_sidebar_content(),
+        width=210, bgcolor=M3_SURFACE, padding=ft.Padding.only(left=10, right=10, top=20, bottom=15),
+    )
+
+    def close_mobile_menu(e):
+        mobile_nav_overlay.visible = False
+        page.update()
+
+    mobile_nav_overlay = ft.Container(
+        content=ft.Column([
+            ft.Row([
+                ft.Text("Menu", size=24, weight="bold", color="#E6E1E5"),
+                ft.IconButton(ft.Icons.CLOSE, on_click=close_mobile_menu, icon_color="#E6E1E5", icon_size=30)
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ft.Divider(color=M3_SURFACE_VARIANT),
+            ft.Column([create_sidebar_content()], scroll=ft.ScrollMode.AUTO, expand=True)
+        ]),
+        bgcolor=M3_SURFACE,
+        padding=20,
+        visible=False,
+        top=0, left=0, right=0, bottom=0,
+        expand=True
+    )
+    page.overlay.append(mobile_nav_overlay)
+
+    def toggle_mobile_menu(e):
+        mobile_nav_overlay.visible = True
+        page.update()
+
+    hamburger_btn = ft.IconButton(
+        icon=ft.Icons.MENU, icon_color="#E6E1E5", 
+        on_click=toggle_mobile_menu,
+        visible=False,
+        icon_size=28
+    )
+
+    header_title = ft.Text("Console Output: SMM", size=20, weight="bold", color="#E6E1E5")
+
+
+    main_content = ft.Container(
+        content=ft.Column([
+            ft.Row([
+                ft.Row([hamburger_btn, header_title], spacing=10),
+                status_indicator
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ft.Container(height=8),
+            debug_progress_bar,
+            ft.Container(
+                content=ft.Column([
+                    console_container,
+                    ft.Divider(height=1, color=M3_SURFACE_VARIANT),
+                    ft.Container(content=cache_status_text, padding=ft.Padding.symmetric(vertical=4))
+                ]),
+                bgcolor=M3_CONSOLE_BG, border_radius=16, padding=16, expand=True,
+                border=ft.Border.all(1, M3_SURFACE_VARIANT)
+            )
+        ], expand=True),
+        bgcolor=M3_BG, padding=20, expand=True
+    )
+
+    def on_resize(e):
+        # Use window_width as fallback, default to 1000 (Desktop) if both are 0
+        w = page.width if page.width > 0 else (page.window_width if page.window_width > 0 else 1000)
+        is_mobile = w < 800
+        sidebar.visible = not is_mobile
+        hamburger_btn.visible = is_mobile
+        # Hide status indicator on mobile if width is small
+        status_indicator.visible = not is_mobile
+        page.update()
+
+    page.on_resized = on_resize
+    page.on_resize = on_resize # Compatibility fallback
+
+    page.add(ft.Row([sidebar, main_content], expand=True, spacing=0))
+    
+    # Trigger initial check
+    on_resize(None)
+
+    async def update_loop():
+        while True:
+            try:
+                updated = False
+                while not log_queue.empty():
+                    tag, msg = log_queue.get_nowait()
+                    if tag == "CacheStatus":
+                        cache_status_text.value = f"> {msg}"
+                        tag = "Debug"
+                    
+                    line = msg + "\n"
+                    if tag in log_buffers:
+                        log_buffers[tag].append(line)
+                        if len(log_buffers[tag]) > 1000: log_buffers[tag].pop(0)
+                        if tag == current_tab:
+                            console_text.value += line
+                            updated = True
+                
+                while not progress_queue.empty():
+                    evt, data = progress_queue.get_nowait()
+                    if evt == "PROGRESS":
+                        msg, val, total = data
+                        progress_label.value = f"{msg} ({val}/{total})"
+                        progress_bar.value = val/total if total > 0 else 0
+                        updated = True
+                    elif evt == "BOOT_START" or evt == "BOOT_END":
+                        progress_label.value = "Cache Status: Idle" if evt == "BOOT_END" else "Bootstrapping..."
+                        progress_bar.value = 1.0 if evt == "BOOT_END" else None
+                        updated = True
+
+                if updated: page.update()
+            except Exception as e:
+                print(f"Update Loop Error: {e}")
+            await asyncio.sleep(0.05)
+
+    asyncio.create_task(update_loop())
+    if smmdb:
+        threading.Thread(target=lambda: smmdb.start_cache_worker(progress_queue, log_queue), daemon=True, name='Cache_Worker').start()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="SmmServer", add_help=False)
-    parser.add_argument('--help', action='help', help='show this help message and exit')
-    parser.add_argument("--cli", nargs='+', help="Run specific services headless (e.g., --cli start, or --cli pretendo proxy)")
-    parser.add_argument("--run-script", help="Internal use to run external scripts")
-    
-    # Use parse_known_args so that extra arguments passed to --run-script 
-    # (like -host 127.0.5.1) don't cause an error in the main parser.
-    args, unknown = parser.parse_known_args()
-
-    if args.run_script:
-        script_path = os.path.join(CLIENTS_DIR, args.run_script)
-        if os.path.exists(script_path):
-            sys.path.insert(0, CLIENTS_DIR)
-            os.chdir(CLIENTS_DIR)
-            
-            # Patch sys.argv so the script thinks it received the arguments directly
-            sys.argv = [script_path] + unknown
-            
-            with open(script_path, 'r', encoding='utf-8') as f:
-                code = compile(f.read(), script_path, 'exec')
-                exec(code, {'__name__': '__main__', '__file__': script_path})
-        sys.exit(0)
-
-    if args.cli:
-        run_cli(args.cli)
-    else:
-        if GUI_AVAILABLE:
-            app = App()
-            app.mainloop()
-        else:
-            print("CustomTkinter not found. Install it to use the GUI, or use --cli start")
+    ft.run(main)
