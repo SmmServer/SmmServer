@@ -78,7 +78,6 @@ jobs:
           SOURCE_DATE_EPOCH: "0"
         run: |
           uv run python fix_pe_headers.py build/windows/SmmServer.exe
-          uv run python fix_zip_timestamps.py build/windows/_internal/base_library.zip
 
       - name: Copy FakeOnlineFiles
         shell: pwsh
