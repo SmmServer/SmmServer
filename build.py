@@ -17,7 +17,7 @@ def run_command(cmd):
 def build_windows():
     print("Building for Windows...")
     # Flet build windows generates an executable in build/windows
-    res = run_command(["flet", "build", "windows", "--yes", "--no-rich-output", "--verbose"])
+    res = run_command(["flet", "build", "windows", "--yes", "--no-rich-output", "--vv"])
     if res == 0:
         exe_path = os.path.join("build", "windows", "SmmServer.exe")
         if os.path.exists(exe_path):
