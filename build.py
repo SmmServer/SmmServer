@@ -6,6 +6,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Force disable rich output to prevent UnicodeEncodeError on Windows
+os.environ["FLET_CLI_NO_RICH_OUTPUT"] = "1"
+os.environ["PYTHONUTF8"] = "1"
+
 def run_command(cmd):
     print(f"Running: {' '.join(cmd)}")
     try:

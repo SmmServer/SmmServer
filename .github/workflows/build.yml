@@ -21,7 +21,7 @@ env:
 jobs:
   build:
     if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) || github.event_name == 'workflow_dispatch' }}
-    runs-on: windows-2022
+    runs-on: ubuntu-latest
     timeout-minutes: 60
 
     steps:
@@ -44,7 +44,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~\AppData\Local\flet\cache
+            ~/.cache/flet
           key: ${{ runner.os }}-flet-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-flet-
