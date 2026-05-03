@@ -11,6 +11,7 @@ import requests
 import traceback
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
+import sqlite3
 
 IS_FROZEN = getattr(sys, 'frozen', False)
 
@@ -230,6 +231,26 @@ class PretendoHandler(BaseHTTPRequestHandler):
 
                 if not found_path:
                     course_source = read_setting('General', 'coursesource', 'CourseWorld')
+
+                    if course_source == 'CourseWorld':
+                        match = re.search(r'(\d+)', raw_name)
+                        if match:
+                            try:
+                                course_id = int(match.group(1))
+                                db_path = os.path.join(www_save_dir, "courseworld", "courseworld.db")
+                                
+                                if os.path.exists(db_path):
+                                    conn = sqlite3.connect(db_path)
+                                    cursor = conn.cursor()
+                                    cursor.execute("SELECT binary_data FROM cw_courses WHERE data_id = ?", (course_id,))
+                                    row = cursor.fetchone()
+                                    conn.close()
+                                    
+                                    if row:
+                                        self.respond(200, "application/octet-stream", row[0], method)
+                                        return
+                            except Exception as e:
+                                print(f"[Pretendo] DB Error reading course binary: {e}", flush=True)
                     
                     if course_source == 'SMMDB':
                         folders_order = ["smmdb", "courseworld"]
