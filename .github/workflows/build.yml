@@ -66,6 +66,11 @@ jobs:
       - name: Smoke test
         run: uv run python -m py_compile main.py pretendo.py proxy.py
 
+      - name: Unit tests
+        env:
+          PYTHONPATH: NintendoClients
+        run: uv run python -m unittest discover -s NintendoClients/tests -v
+
       - name: Build
         env:
           PYTHONHASHSEED: "1"
