@@ -8,6 +8,7 @@ import configparser
 import argparse
 import pretendo
 import proxy
+import diagnostics
 import warnings
 import ctypes
 import tkinter
@@ -87,6 +88,20 @@ port=59900
 pid=1337
 password=password
 token=U01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU00=
+
+[1018DC00]
+host={BIND_IP}
+port=59900
+pid=1337
+password=password
+token=U01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU00=
+
+[1018DD00]
+host={BIND_IP}
+port=59900
+pid=1337
+password=password
+token=U01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU01NU00=
 """
 
 def read_setting(section, key, fallback):
@@ -121,10 +136,19 @@ def setup_configs():
                     config.set('00003200', 'host', BIND_IP)
                     updated = True
             
+            for _section in ('1018DB00', '1018DC00', '1018DD00'):
+                if config.has_section(_section):
+                    if config.get(_section, 'host', fallback='') != BIND_IP:
+                        config.set(_section, 'host', BIND_IP)
+                        updated = True
             if config.has_section('1018DB00'):
-                if config.get('1018DB00', 'host', fallback='') != BIND_IP:
-                    config.set('1018DB00', 'host', BIND_IP)
-                    updated = True
+                for _section in ('1018DC00', '1018DD00'):
+                    if not config.has_section(_section):
+                        config.add_section(_section)
+                        for _k, _v in config.items('1018DB00'):
+                            config.set(_section, _k, _v)
+                        config.set(_section, 'host', BIND_IP)
+                        updated = True
             
             if updated:
                 with open(ini_path, 'w') as f: config.write(f)
@@ -317,8 +341,30 @@ class ServerManager:
         except Exception as e:
             self.log("Debug", f"Failed to start {name}: {e}")
 
+    def refresh_cache(self):
+        def worker():
+            try:
+                self.log("Debug", "Manual course refresh requested...")
+                if smmdb:
+                    mgr = smmdb.CacheManager()
+                    n = mgr.refresh_once()
+                    self.log("Debug", f"Manual refresh finished: {n} new course(s).")
+                else:
+                    self.log("Debug", "SMMDB module not available.")
+            except Exception as e:
+                self.log("Debug", f"Manual refresh failed: {e}")
+        threading.Thread(target=worker, daemon=True).start()
+
+    def run_diagnostics(self):
+        try:
+            for _w in diagnostics.diagnose():
+                self.log("Debug", f"[Diagnostics] {_w}")
+        except Exception as _e:
+            self.log("Debug", f"Diagnostics failed: {_e}")
+
     def start_services(self, services=['start']):
         self.running = True
+        self.run_diagnostics()
         all_services = 'start' in services
         
         if all_services or 'pretendo' in services: self.start_pretendo()
@@ -368,7 +414,7 @@ class CemuManager:
             else: subprocess.Popen([path], cwd=os.path.dirname(path))
         except Exception as e: log_callback("Debug", f"Failed to launch Cemu: {e}")
 
-class App(ctk.CTk):
+class App(ctk.CTk if GUI_AVAILABLE else object):
     def __init__(self):
         super().__init__()
         self.title("SmmServer")
@@ -414,6 +460,9 @@ class App(ctk.CTk):
         self.progress_bar = ctk.CTkProgressBar(self.sidebar_frame, progress_color=M3_PRIMARY)
         self.progress_bar.set(0)
         self.progress_bar.pack(padx=20, pady=(0, 10), fill="x")
+
+        self.btn_refresh = ctk.CTkButton(self.sidebar_frame, text="↻ Refresh Courses", command=self.on_refresh_courses, fg_color="transparent", border_width=1, border_color=M3_SURFACE_VARIANT, text_color=M3_PRIMARY, hover_color=M3_SURFACE_VARIANT, corner_radius=20, height=36, font=ctk.CTkFont(family=FONT_FAMILY, size=13))
+        self.btn_refresh.pack(padx=20, pady=(0, 10), fill="x")
         
         ctk.CTkLabel(self.sidebar_frame, text="Emulator Config", text_color="#CAC4D0", font=(FONT_FAMILY, 12)).pack(padx=20, pady=(15,5), anchor="w")
         
@@ -497,6 +546,10 @@ class App(ctk.CTk):
         self.status_container.configure(fg_color="#3c2e2e")
         self.status_dot.configure(text_color="#FFB4AB")
         self.status_lbl.configure(text="Stopped", text_color="#FFB4AB")
+
+    def on_refresh_courses(self):
+        self.manager.log("Debug", "Refresh Courses clicked.")
+        self.manager.refresh_cache()
 
     def launch_cemu(self):
         if self.cemu_vers:

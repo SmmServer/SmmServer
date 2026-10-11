@@ -167,8 +167,11 @@ class PretendoHandler(BaseHTTPRequestHandler):
             if parsed.path == "/v1/api/provider/nex_token/@me":
                 qs = parse_qs(parsed.query)
                 gid = qs.get('game_server_id', [''])[0]
-                if gid in config:
-                    s = config[gid]
+                gid_key = gid
+                if isinstance(gid_key, str) and gid_key.lower() in ("1018db00", "1018dc00", "1018dd00"):
+                    gid_key = "1018DB00"
+                if gid_key in config:
+                    s = config[gid_key]
                     xml = f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><nex_token><host>{s.get("host")}</host><nex_password>{s.get("password")}</nex_password><pid>{s.get("pid")}</pid><port>{s.get("port")}</port><token>{s.get("token")}</token></nex_token>'
                     self.respond(200, "application/xml;charset=UTF-8", xml.encode('utf-8'), method)
                 else:
@@ -230,14 +233,14 @@ class PretendoHandler(BaseHTTPRequestHandler):
 
                 if not found_path:
                     course_source = read_setting('General', 'coursesource', 'CourseWorld')
-                    
+
                     if course_source == 'SMMDB':
                         folders_order = ["smmdb", "courseworld"]
                     else:
                         folders_order = ["courseworld", "smmdb"]
 
                     bases_to_check = [
-                        os.path.join(www_save_dir, folders_order[0]), 
+                        os.path.join(www_save_dir, folders_order[0]),
                         os.path.join(www_save_dir, folders_order[1])
                     ]
                     if os.path.exists(CLIENTS_DIR):
@@ -252,6 +255,20 @@ class PretendoHandler(BaseHTTPRequestHandler):
                                 found_path = try_path
                                 break
                         if found_path: break
+
+                if not found_path:
+                    for _ds in (
+                        os.path.join(www_save_dir, "datastore"),
+                        os.path.join(CLIENTS_DIR, "www", "datastore"),
+                        os.path.normpath(os.path.join(BASE_DIR, "Cemu", "datastore")),
+                    ):
+                        try:
+                            _p = os.path.join(_ds, search_filename)
+                            if os.path.exists(_p):
+                                found_path = _p
+                                break
+                        except Exception:
+                            continue
                 
                 if found_path:
                     try:

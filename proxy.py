@@ -72,6 +72,18 @@ def start_server_instance(server_class, port, use_ssl=False, context=None):
         proto = "HTTPS" if use_ssl else "HTTP"
         print(f"[Proxy] IPv4 {proto} listening on Port {port}", flush=True)
         server.serve_forever()
+    except OSError as e:
+        if port == 443:
+            print(f"[Proxy] Failed to bind 443 ({e}). HTTPS interception is REQUIRED. "
+                  f"Close VPN/antivirus web filters, Skype, or another web server, "
+                  f"allow SmmServer/Cemu through the firewall, then restart. "
+                  f"Avast was a confirmed blocker (issue #10).", flush=True)
+        elif port == 80:
+            print(f"[Proxy] Port 80 unavailable ({e}). This is optional (HTTP fallback); "
+                  f"continuing on 443 only. If HTTP course fetches fail, stop IIS/Skype/VMware "
+                  f"using port 80 or run as Administrator (issue #5).", flush=True)
+        else:
+            print(f"[Proxy] Failed to bind {port}: {e}", flush=True)
     except Exception as e:
         print(f"[Proxy] Failed to bind {port}: {e}", flush=True)
 
@@ -89,9 +101,10 @@ def start_proxy():
     except Exception as e:
         print(f"[Proxy] SSL Error: {e}", flush=True)
 
-    # Listen only on IPv4 Port 443 with SSL (No IPv6, No Port 80)
     t = threading.Thread(target=start_server_instance, args=(ReusableHTTPServer, 443, True, ctx), daemon=True)
     t.start()
+    t80 = threading.Thread(target=start_server_instance, args=(ReusableHTTPServer, 80, False, None), daemon=True)
+    t80.start()
 
 def stop_proxy():
     for s in servers:
